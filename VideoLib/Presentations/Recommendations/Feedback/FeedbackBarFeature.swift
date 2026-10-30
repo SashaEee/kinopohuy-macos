@@ -82,8 +82,11 @@ struct FeedbackBarFeature {
                 let level = TasteLevel.toggled(current: state.level, tapped: tapped)
                 state.level = level
                 state.asksAfterSeen = false
+                state.isLoaded = true
 
                 return .merge(
+                    // A read still on its way is older than this press.
+                    .cancel(id: CancelID.load),
                     .cancel(id: CancelID.seenPrompt),
                     .run { _ in
                         if let level {
@@ -104,7 +107,11 @@ struct FeedbackBarFeature {
                 }
 
                 state.marks.insert(kind)
-                let record: Effect<Action> = .run { _ in await recommender.feedback(titleId, kind) }
+                state.isLoaded = true
+                let record: Effect<Action> = .merge(
+                    .cancel(id: CancelID.load),
+                    .run { _ in await recommender.feedback(titleId, kind) }
+                )
 
                 guard kind == .seen, state.level == nil else { return record }
 
@@ -126,10 +133,10 @@ struct FeedbackBarFeature {
                 state.marks.remove(kind)
                 if kind == .seen { state.asksAfterSeen = false }
 
-                return .run { _ in
+                return .merge(.cancel(id: CancelID.load), .run { _ in
                     await recommender.removeFeedback(titleId, kind)
                     await RecCardMarks.shared.clear(titleId)
-                }
+                })
 
             case .seenPromptEnded:
                 state.asksAfterSeen = false

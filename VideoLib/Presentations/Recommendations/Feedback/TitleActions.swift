@@ -67,8 +67,10 @@ final class RecCardMarks {
 
     private(set) var lastUndone: Undone?
 
-    /// Each title's actions in order: undoing waits for them and reverts them newest first.
-    @ObservationIgnored private var done: [String: [Task<TitleActionUndo, Never>]] = [:]
+    /// What each title's actions changed, oldest first: «Вернуть» reverts them newest first.
+    @ObservationIgnored private var undos: [String: [TitleActionUndo]] = [:]
+    /// Each title's work in order (record, take back, undo), so a quick second press never lands before the first.
+    @ObservationIgnored private var queues: [String: Task<Void, Never>] = [:]
     @ObservationIgnored @Dependency(\.recommender) private var recommender
 
     func mark(_ titleId: String?) -> Mark? {
@@ -98,12 +100,9 @@ final class RecCardMarks {
         if let rated = mark.rated {
             record(TitleAction(rated), for: titleId)
         } else if previous != nil {
-            let recommender = recommender
-            let pending = done[titleId] ?? []
-            done[titleId] = Array(pending.dropLast())
-            Task {
-                guard let last = pending.last else { return }
-                await last.value.revert(recommender)
+            enqueue(titleId) { marks, recommender in
+                guard let last = marks.undos[titleId]?.popLast() else { return }
+                await last.revert(recommender)
             }
         }
     }
@@ -114,25 +113,22 @@ final class RecCardMarks {
             marks[titleId] = nil
         }
         lastUndone = Undone(titleId: titleId, serial: (lastUndone?.serial ?? 0) + 1)
-        let recommender = recommender
-        let tasks = done.removeValue(forKey: titleId) ?? []
-        Task {
-            for task in tasks.reversed() {
-                await task.value.revert(recommender)
+        enqueue(titleId) { marks, recommender in
+            let undos = marks.undos.removeValue(forKey: titleId) ?? []
+            for undo in undos.reversed() {
+                await undo.revert(recommender)
             }
         }
     }
 
-    /// Shows a mark for an action recorded elsewhere (a feature that did the recording itself).
-    func show(_ action: TitleAction, for titleId: String) {
-        withAnimation(.smooth(duration: 0.3)) {
-            marks[titleId] = Mark(action: action)
-        }
-    }
-
+    /// The title's mark is gone (taken back on its page): the card stops saying so; what was recorded stays.
     func clear(_ titleId: String) {
-        marks[titleId] = nil
-        done[titleId] = nil
+        withAnimation(.smooth(duration: 0.3)) {
+            marks[titleId] = nil
+        }
+        enqueue(titleId) { marks, _ in
+            marks.undos[titleId] = nil
+        }
     }
 
     /// «Очистить данные рекомендаций»: no card says otherwise any more.
@@ -140,18 +136,23 @@ final class RecCardMarks {
         withAnimation(.smooth(duration: 0.3)) {
             marks = [:]
         }
-        done = [:]
+        undos = [:]
     }
 
     private func record(_ action: TitleAction, for titleId: String) {
-        let recommender = recommender
-        let previous = done[titleId]?.last
-        let task = Task {
-            // In order: an undo of the first must not land after the second.
-            _ = await previous?.value
-            return await action.perform(titleId, recommender)
+        enqueue(titleId) { marks, recommender in
+            let undo = await action.perform(titleId, recommender)
+            marks.undos[titleId, default: []].append(undo)
         }
-        done[titleId, default: []].append(task)
+    }
+
+    private func enqueue(_ titleId: String, _ work: @escaping @MainActor @Sendable (RecCardMarks, RecommenderClient) async -> Void) {
+        let recommender = recommender
+        let previous = queues[titleId]
+        queues[titleId] = Task {
+            await previous?.value
+            await work(self, recommender)
+        }
     }
 }
 
