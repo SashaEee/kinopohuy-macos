@@ -130,6 +130,8 @@ public struct TitleFeatures: Codable, Sendable, Hashable, Identifiable {
     public var releasedEpisodes: Int?
     /// Seasons released, when known.
     public var seasons: Int?
+    /// The series is finished (no more seasons coming), when the page says so: the «Завершён» tag.
+    public var ended: Bool?
     /// When the latest episode came out (seconds since 1970), for «вышел новый сезон».
     public var lastEpisodeAt: Double?
     /// The release date (seconds since 1970), for freshness.
@@ -152,7 +154,7 @@ public struct TitleFeatures: Codable, Sendable, Hashable, Identifiable {
         kpRating: Double? = nil, kpVotes: Int? = nil, imdbRating: Double? = nil, imdbVotes: Int? = nil,
         siteRating: Double? = nil, siteVotes: Int? = nil, rtCritic: Int? = nil, metacritic: Int? = nil,
         boards: [BoardRef] = [], franchiseId: String? = nil, franchise: [FranchisePart] = [], watchAlso: [String] = [],
-        isSeries: Bool = false, releasedEpisodes: Int? = nil, seasons: Int? = nil, lastEpisodeAt: Double? = nil,
+        isSeries: Bool = false, releasedEpisodes: Int? = nil, seasons: Int? = nil, ended: Bool? = nil, lastEpisodeAt: Double? = nil,
         releasedAt: Double? = nil, comingSoon: Bool = false, available: Bool = true, voiceOvers: [String] = [],
         poster: String? = nil, synopsis: String? = nil, fetchedAt: Double
     ) {
@@ -186,6 +188,7 @@ public struct TitleFeatures: Codable, Sendable, Hashable, Identifiable {
         self.isSeries = isSeries
         self.releasedEpisodes = releasedEpisodes
         self.seasons = seasons
+        self.ended = ended
         self.lastEpisodeAt = lastEpisodeAt
         self.releasedAt = releasedAt
         self.comingSoon = comingSoon

@@ -123,10 +123,14 @@ public struct Evidence: Codable, Sendable, Hashable {
     /// How many of the user's titles share it (verifiable counts: «3 его фильма»).
     public var count: Int?
     public var features: [FeatureKey]
+    /// The bookmark folder an intent comes from («На выходные»).
+    public var folder: String?
+    /// What an intent to watch rests on (S3): a bookmark, «Досмотреть», a followed series.
+    public var origin: IntentOrigin?
 
     public init(
         anchorIds: [String] = [], path: [String] = [], board: BoardRef? = nil, person: PersonRef? = nil,
-        count: Int? = nil, features: [FeatureKey] = []
+        count: Int? = nil, features: [FeatureKey] = [], folder: String? = nil, origin: IntentOrigin? = nil
     ) {
         self.anchorIds = anchorIds
         self.path = path
@@ -134,7 +138,16 @@ public struct Evidence: Codable, Sendable, Hashable {
         self.person = person
         self.count = count
         self.features = features
+        self.folder = folder
+        self.origin = origin
     }
+}
+
+/// Where an intent to watch comes from: «Из закладок «На выходные»», «Ждёт в «Досмотреть»», «Вы отслеживаете».
+public enum IntentOrigin: String, Codable, Sendable, Hashable, CaseIterable {
+    case bookmark
+    case accountList
+    case followed
 }
 
 /// One reason, ready to show: a short line on the card and a longer one for «Почему это?».
@@ -308,6 +321,17 @@ public struct EngineInput: Codable, Sendable {
         self.settings = settings
         self.weights = weights
         self.seed = seed
+    }
+
+    /// Weights are optional in JSON (an export without them, or with a partial set, uses the defaults).
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        context = try c.decode(EngineContext.self, forKey: .context)
+        titles = try c.decode([TitleFeatures].self, forKey: .titles)
+        signals = try c.decode(UserSignals.self, forKey: .signals)
+        settings = try c.decodeIfPresent(RecommenderSettings.self, forKey: .settings) ?? RecommenderSettings()
+        weights = try c.decodeIfPresent(Weights.self, forKey: .weights) ?? .default
+        seed = try c.decodeIfPresent(UInt64.self, forKey: .seed) ?? 0
     }
 }
 
