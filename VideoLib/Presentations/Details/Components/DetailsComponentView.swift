@@ -486,6 +486,12 @@ struct DetailsComponentView: View {
                             }
                         }
                     }
+                    // Right under the site's stars: what you think, for the recommendations (kept on this Mac).
+                    if store.feedback.titleId != nil {
+                        FactRow(label: "Ваша оценка") {
+                            FeedbackBarView(store: store.scope(state: \.feedback, action: \.feedback))
+                        }
+                    }
                     if details.imdbRating != nil || details.kpRating != nil || details.waRating != nil {
                         FactRow(label: "Оценки") {
                             HStack(spacing: 8) {

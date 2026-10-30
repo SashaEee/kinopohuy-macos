@@ -237,9 +237,12 @@ struct DataSettings: View {
     @FetchOne(PlayerPosition.count(), animation: .easeInOut) private var playerPositionsCount: Int = 0
     @FetchOne(SelectPosition.count(), animation: .easeInOut) private var selectPositionsCount: Int = 0
 
+    @Dependency(\.recommender) private var recommender
+
     @State private var diskCacheSize: UInt?
     @State private var confirmClearPositions = false
     @State private var confirmClearSelections = false
+    @State private var confirmClearRecommendations = false
 
     var body: some View {
         SettingsGroup(title: "Картинки") {
@@ -293,6 +296,16 @@ struct DataSettings: View {
                 .opacity(playerPositionsCount == 0 ? 0.45 : 1)
             }
 
+            // Beside the history, as the recommendations are built from it (the same button as in «Рекомендации»).
+            SettingsRow(title: "Данные рекомендаций", subtitle: "Оценки, отметки «Скрыть» и «Уже смотрел», показы и вкус. Изученный каталог тайтлов останется") {
+                Button {
+                    confirmClearRecommendations = true
+                } label: {
+                    Text(verbatim: "Очистить")
+                }
+                .buttonStyle(KPSecondaryButtonStyle(size: 13))
+            }
+
             if !isLoggedIn {
                 SettingsRow(title: "Выбранные озвучки и серии", subtitle: selectPositionsCount == 0 ? "Пока пусто" : "Запомнено для тайтлов: \(selectPositionsCount). Без входа это хранится только здесь") {
                     Button {
@@ -332,6 +345,18 @@ struct DataSettings: View {
             }
         } message: {
             Text(verbatim: "Тайтлы будут открываться с озвучкой и серией по умолчанию.")
+        }
+        .confirmationDialog(Text(verbatim: "Очистить все данные рекомендаций?"), isPresented: $confirmClearRecommendations) {
+            Button(role: .destructive) {
+                Task {
+                    await recommender.clearAll()
+                    RecCardMarks.shared.forgetAll()
+                }
+            } label: {
+                Text(verbatim: "Очистить")
+            }
+        } message: {
+            Text(verbatim: "Пропадут оценки, отметки «Скрыть» и «Уже смотрел», история показов и вкус. Отменить это нельзя — можно сначала сделать «Экспорт…» в разделе «Рекомендации».")
         }
     }
 

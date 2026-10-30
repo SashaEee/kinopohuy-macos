@@ -63,7 +63,8 @@ struct WatchingLaterCardView: View {
                 kind: movie.watched ? nil : movie.episodesLeft,
                 note: note,
                 progress: progress?.fraction,
-                width: fixedWidth ?? metrics.card
+                width: fixedWidth ?? metrics.card,
+                interactive: RecCardMarks.shared.mark(movie.watchLaterId.id) == nil
             ) {
                 // Decoded at the card's fixed pixel size whatever the tier, so the title's page finds it in memory.
                 KPRemoteImage(url: movie.cover, downsample: KP.cardPosterPixels())
@@ -79,6 +80,10 @@ struct WatchingLaterCardView: View {
         .accessibilityHint(Text(verbatim: movie.watched ? "Открывает страницу" : "Продолжает просмотр"))
         .opacity(movie.watched ? 0.55 : 1)
         .disabled(movie.watchLaterId.id == nil)
+        // «Убрать из ряда», «Это смотрел не я», «Не моё» from the menu: the poster says so, with «Вернуть».
+        .overlay(alignment: .top) {
+            RecCardMarkOverlay(titleId: movie.watchLaterId.id, width: fixedWidth ?? metrics.card)
+        }
     }
 
     /// A click plays: the white disc says so under the pointer.
@@ -166,9 +171,12 @@ extension MovieWatchLater {
 }
 
 extension View {
-    /// The continue list's right-click menu: go on watching, open the page, mark it watched (or not), take it off.
-    func kpWatchingMenu(_ movie: MovieWatchLater, switchWatched: @escaping () -> Void, remove: @escaping () -> Void) -> some View {
-        modifier(WatchingMenu(movie: movie, switchWatched: switchWatched, remove: remove))
+    /// The continue list's right-click menu: go on watching, open the page, take it off the row («Убрать из ряда», the
+    /// site's progress stays), «Это смотрел не я», «Не моё», mark it watched (or not), take it off the list.
+    /// onAction: a screen that records these itself and redraws (e.g. «Досмотреть»'s segments); nil records them here
+    /// and the card shows what was done.
+    func kpWatchingMenu(_ movie: MovieWatchLater, switchWatched: @escaping () -> Void, remove: @escaping () -> Void, onAction: ((TitleAction) -> Void)? = nil) -> some View {
+        modifier(WatchingMenu(movie: movie, switchWatched: switchWatched, remove: remove, onAction: onAction))
     }
 }
 
@@ -176,6 +184,7 @@ private struct WatchingMenu: ViewModifier {
     let movie: MovieWatchLater
     let switchWatched: () -> Void
     let remove: () -> Void
+    let onAction: ((TitleAction) -> Void)?
 
     @Environment(\.kpNavigate) private var navigate
 
@@ -192,6 +201,17 @@ private struct WatchingMenu: ViewModifier {
                 navigate(.details(movie.simple))
             } label: {
                 Label { Text(verbatim: "Подробнее") } icon: { Image(systemName: "info.circle") }
+            }
+            if let titleId = movie.watchLaterId.id {
+                Divider()
+                // «Бросил» only where the screen can ask about the site's list too («Досмотреть»); no «Уже смотрел»:
+                // «Отметить как просмотренное» below says it to the site as well.
+                TitleFeedbackMenuItems(
+                    titleId: titleId,
+                    actions: movie.watched ? [.notMe, .notForMe, .hidden]
+                        : (onAction == nil ? [.continueHidden] : [.continueHidden, .dropped]) + [.notMe, .notForMe, .hidden, .notToday],
+                    perform: onAction
+                )
             }
             Divider()
             Button {

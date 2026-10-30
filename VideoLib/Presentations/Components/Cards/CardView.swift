@@ -5,6 +5,7 @@ struct CardView: View {
     private let draggable: Bool
     private let fixedWidth: CGFloat?
     private let onOpen: (() -> Void)?
+    private let feedbackMenu: Bool
 
     @Environment(\.kpMetrics) private var metrics
     @Environment(\.kpNavigate) private var navigate
@@ -13,10 +14,13 @@ struct CardView: View {
 
     /// reservesSpace: kept for the callers; every card now keeps two lines for its name. width: nil is the size tier's.
     /// onOpen: runs as the card opens its title (search remembers the query that led there).
-    init(movie: MovieSimple, draggable: Bool = false, reservesSpace _: Bool = false, width: CGFloat? = nil, onOpen: (() -> Void)? = nil) {
+    /// feedbackMenu: right-click «Не моё · Скрыть · Уже смотрел · Не сегодня»; by default on, except on draggable cards
+    /// (a bookmarks folder), whose caller puts its own menu on them and an inner one would hide it.
+    init(movie: MovieSimple, draggable: Bool = false, reservesSpace _: Bool = false, width: CGFloat? = nil, feedbackMenu: Bool? = nil, onOpen: (() -> Void)? = nil) {
         self.movie = movie
         self.draggable = draggable
         fixedWidth = width
+        self.feedbackMenu = feedbackMenu ?? !draggable
         self.onOpen = onOpen
     }
 
@@ -45,6 +49,17 @@ struct CardView: View {
             }
         }
         .buttonStyle(.plain)
+        // Acted on from the menu: the poster says so, with «Вернуть» (over the link, so its buttons get the clicks).
+        .overlay(alignment: .top) {
+            RecCardMarkOverlay(titleId: movie.movieId.id, width: width)
+        }
+        .viewModifier { view in
+            if feedbackMenu {
+                view.kpTitleFeedbackMenu(movie.movieId.id)
+            } else {
+                view
+            }
+        }
     }
 
     private var card: some View {
@@ -55,7 +70,8 @@ struct CardView: View {
             ratingColor: movie.cat?.rating.map(KP.ratingColor) ?? .black.opacity(0.62),
             note: movie.info?.title,
             progress: filmProgress,
-            width: width
+            width: width,
+            interactive: RecCardMarks.shared.mark(movie.movieId.id) == nil
         ) {
             KPRemoteImage(url: movie.poster, downsample: KP.cardPosterPixels())
         }

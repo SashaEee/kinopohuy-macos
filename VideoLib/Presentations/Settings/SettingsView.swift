@@ -72,6 +72,8 @@ struct SettingsView: View {
             GeneralSettings()
         case .player:
             PlayerSettings()
+        case .recommendations:
+            RecommendationsSettings()
         case .downloads:
             DownloadsSettings()
         case .updates:

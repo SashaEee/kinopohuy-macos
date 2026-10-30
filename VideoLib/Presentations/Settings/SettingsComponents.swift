@@ -4,6 +4,7 @@ import SwiftUI
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general
     case player
+    case recommendations
     case downloads
     case updates
     case data
@@ -17,6 +18,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: "Основное"
         case .player: "Плеер"
+        case .recommendations: "Рекомендации"
         case .downloads: "Загрузки"
         case .updates: "Обновления"
         case .data: "Данные"
@@ -29,6 +31,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: "Адрес сайта, аккаунт и вид приложения"
         case .player: "Как открывается, выглядит и звучит видео"
+        case .recommendations: "Что советовать и как узнать ваш вкус. Всё хранится только на этом Mac"
         case .downloads: "Куда и сколько загружать одновременно"
         case .updates: "Новые версии приходят сами или по кнопке"
         case .data: "Кэш картинок, места просмотра и история"
@@ -40,6 +43,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape.fill"
         case .player: "play.rectangle.fill"
+        case .recommendations: "sparkles"
         case .downloads: "arrow.down.circle.fill"
         case .updates: "arrow.triangle.2.circlepath"
         case .data: "internaldrive.fill"
@@ -51,7 +55,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 // MARK: - Sidebar
 
 /// The sections down the left: the chosen one on a light chip with its icon in a white square (the app's "chosen is
-/// white"), ⌘1…⌘6 to jump between them.
+/// white"), ⌘1…⌘7 to jump between them.
 struct SettingsSidebar: View {
     @Binding var selection: SettingsSection
 
