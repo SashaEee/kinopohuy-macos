@@ -45,6 +45,8 @@ actor TitleEnricher {
     static let idleInterval: TimeInterval = 30 * 60
 
     private var loop: Task<Void, Never>?
+    /// Bumped by every start and stop, so an old loop still winding down never takes over a new one's state.
+    private var generation = 0
     private var pending: [Target] = []
     private var pendingBuiltAt = Date.distantPast
     private var failed: [String: Double] = [:]
@@ -72,12 +74,15 @@ actor TitleEnricher {
     /// Starts the loop (no-op when it runs or isn't allowed).
     func start() {
         guard loop == nil, Self.isAllowed else { return }
+        generation += 1
+        let generation = generation
         loop = Task { [weak self] in
-            await self?.run()
+            await self?.run(generation: generation)
         }
     }
 
     func stop() {
+        generation += 1
         loop?.cancel()
         loop = nil
         isReading = false
@@ -98,11 +103,12 @@ actor TitleEnricher {
         await hooks.batchDone()
     }
 
-    private func run() async {
+    /// The loop of one start; a newer start (or a stop) makes it end at its next step.
+    private func run(generation: Int) async {
         await loadFailed()
         sinceBatch = 0
 
-        while !Task.isCancelled, Self.isAllowed {
+        reading: while !Task.isCancelled, generation == self.generation, Self.isAllowed {
             guard await queue.hasBudget() else {
                 isReading = false
                 await flush()
@@ -120,19 +126,15 @@ actor TitleEnricher {
             isReading = true
             switch step {
             case .crawl:
+                pending = []
+                sinceBatch += Self.batchSize
                 do {
                     try await crawler.run(hooks.plan())
                 } catch let failure as SiteFailure where failure == .signedOut || failure == .notConfigured || failure == .cancelled {
-                    sinceBatch += Self.batchSize
-                    await flush()
-                    isReading = false
-                    loop = nil
-                    return
+                    break reading
                 } catch {
                     // Anything else (the day's limit, refusals) just ends this run; the loop goes on.
                 }
-                pending = []
-                sinceBatch += Self.batchSize
                 await flush()
 
             case let .page(target):
@@ -144,10 +146,7 @@ actor TitleEnricher {
                 } catch let failure as SiteFailure {
                     switch failure {
                     case .signedOut, .notConfigured, .cancelled:
-                        await flush()
-                        isReading = false
-                        loop = nil
-                        return
+                        break reading
                     case .unreadable:
                         await markFailed(target.id)
                     case .forbidden, .tooManyRequests, .banned, .network, .dailyLimit:
@@ -155,12 +154,16 @@ actor TitleEnricher {
                         pending.insert(target, at: 0)
                     }
                 } catch {
+                    // Only the queue reads pages here, and it throws `SiteFailure`; anything else is a stop.
+                    if Task.isCancelled { break reading }
                     await markFailed(target.id)
                 }
             }
         }
 
         await flush()
+        // A newer start owns the state from here.
+        guard generation == self.generation else { return }
         isReading = false
         loop = nil
     }

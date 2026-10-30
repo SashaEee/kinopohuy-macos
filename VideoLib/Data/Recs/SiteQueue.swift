@@ -191,13 +191,22 @@ actor SiteQueue {
 
     /// Reads one page when its turn comes. Throws `SiteFailure`.
     func read<T: Sendable>(_ request: any URLRequestConvertible, parse: @escaping @Sendable (String) throws -> T) async throws -> T {
-        while busy {
-            try await Task.sleep(for: .milliseconds(200))
+        // A wait cut short is a stop, never a failed page.
+        do {
+            while busy {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+        } catch {
+            throw SiteFailure.cancelled
         }
         busy = true
         defer { busy = false }
 
-        try await waitForTurn()
+        do {
+            try await waitForTurn()
+        } catch {
+            throw SiteFailure.cancelled
+        }
         let now = Date()
         try await spendBudget(now: now)
         lastRequestAt = now
