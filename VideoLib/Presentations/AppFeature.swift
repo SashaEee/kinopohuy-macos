@@ -71,6 +71,7 @@ struct AppFeature {
     @Dependency(\.appRouter) private var appRouter
     @Dependency(\.getVersionUseCase) private var getVersionUseCase
     @Dependency(\.logoutUseCase) private var logoutUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -144,7 +145,10 @@ struct AppFeature {
                         let version = try await getVersionUseCase()
 
                         Defaults[.siteAppVersion] = version
-                    }
+                    },
+                    // Recommendations: Home's cached page warms up, and when signed in the catalogue grows in the
+                    // background (within the daily limit; it does nothing for guests or with it switched off).
+                    .run { _ in await recommender.startBackground() }
                 )
 
             case .siteAddressChanged:
@@ -213,8 +217,11 @@ struct AppFeature {
                 }
 
                 // Signed in or out: Home's banner, rows and «Продолжить просмотр» are different now (the site may
-                // show some title pages to signed-in viewers only).
-                return .send(.home(.reload))
+                // show some title pages to signed-in viewers only). Signed in, the catalogue reading starts again.
+                return .merge(
+                    .send(.home(.reload)),
+                    isLoggedIn ? .run { _ in await recommender.startBackground() } : .none
+                )
 
             case .destination(.presented(.signIn(.delegate(.showRestore)))):
                 state.destination = .restore(RestoreFeature.State())

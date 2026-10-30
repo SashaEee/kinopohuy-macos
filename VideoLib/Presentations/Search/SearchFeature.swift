@@ -53,6 +53,7 @@ struct SearchFeature {
     @Dependency(\.searchUseCase) private var searchUseCase
     @Dependency(\.getWatchingNowMoviesUseCase) private var getWatchingNowMoviesUseCase
     @Dependency(\.continuousClock) private var clock
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -163,6 +164,9 @@ struct SearchFeature {
             let result = await Result { try await getWatchingNowMoviesUseCase(page: 1, genre: 0) }
 
             await send(.popularLoaded(result), animation: .easeInOut)
+
+            // The cards go into the recommender's catalogue (no extra request).
+            if case let .success(cards) = result { await recommender.captureCards(cards, nil) }
         }
         .cancellable(id: CancelID.popular, cancelInFlight: true)
     }
@@ -183,6 +187,8 @@ struct SearchFeature {
             let result = await Result { try await searchUseCase(query: query, page: page) }
 
             await send(.moviesLoaded(isInitial: isInitial, result), animation: .easeInOut)
+
+            if case let .success(cards) = result { await recommender.captureCards(cards, nil) }
         }
         .cancellable(id: CancelID.load, cancelInFlight: true)
     }

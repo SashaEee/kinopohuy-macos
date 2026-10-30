@@ -122,6 +122,7 @@ struct HomeFeature {
     @Dependency(\.continuousClock) private var clock
     @Dependency(\.date.now) private var now
     @Dependency(\.uuid) private var uuid
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -354,6 +355,9 @@ struct HomeFeature {
             let result = await Result { try await getSeriesUpdatesUseCase() }
 
             await send(.updatesLoaded(result), animation: .smooth(duration: 0.35))
+
+            // Which series the account follows, for the recommender.
+            if case let .success(groups) = result { await recommender.captureSeriesUpdates(groups) }
         }
         .cancellable(id: CancelID.updates, cancelInFlight: true)
     }
@@ -366,6 +370,7 @@ struct HomeFeature {
         return .run { send in
             for episode in missing {
                 guard let details = try? await getMovieDetailsUseCase(movieId: episode.movieId) else { continue }
+                await recommender.captureDetails(details)
                 let poster = details.poster.isEmpty ? details.hposter : details.poster
                 guard !poster.isEmpty else { continue }
 
@@ -391,6 +396,8 @@ struct HomeFeature {
             let name = (try? result.get().nameRussian).flatMap { $0.isEmpty ? nil : $0 } ?? first.name
 
             await send(.similarLoaded(source: first.watchLaterId, name: name, result.map(\.watchAlsoMovies)), animation: .smooth(duration: 0.35))
+
+            if case let .success(details) = result { await recommender.captureDetails(details) }
         }
         .cancellable(id: CancelID.similar, cancelInFlight: true)
     }
@@ -458,6 +465,9 @@ struct HomeFeature {
             let result = await Result { try await movies(category) }
 
             await send(.categoryLoaded(category, isInitial: isInitial, result), animation: .easeInOut)
+
+            // The row's cards go into the recommender's catalogue (no extra request).
+            if case let .success(cards) = result { await recommender.captureCards(cards, nil) }
         }
         .cancellable(id: CancelID.load, cancelInFlight: true)
     }
@@ -475,6 +485,8 @@ struct HomeFeature {
                 if hero.count == 1 {
                     await send(.heroLoaded(hero), animation: .easeInOut)
                 }
+
+                await recommender.captureDetails(details)
             }
 
             if hero.count != 1 {
@@ -501,6 +513,9 @@ struct HomeFeature {
             let result = await Result { try await getWatchingLaterMoviesUseCase() }
 
             await send(.continueLoaded(result), animation: .easeInOut)
+
+            // The whole list, watched ones too: the recommender's strongest signal about taste.
+            if case let .success(movies) = result { await recommender.captureAccountList(movies) }
         }
         .cancellable(id: CancelID.continueWatching, cancelInFlight: true)
     }

@@ -86,6 +86,7 @@ struct DetailsFeature {
     @Dependency(\.getMovieDetailsUseCase) private var getMovieDetailsUseCase
     @Dependency(\.getMovieBookmarksUseCase) private var getMovieBookmarksUseCase
     @Dependency(\.rateUseCase) private var rateUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -111,6 +112,10 @@ struct DetailsFeature {
                     await send(.detailsLoaded(result), awaitingAnimation: .smooth(duration: 0.55))
 
                     guard case let .success(details) = result else { return }
+
+                    // The page goes into the recommender's catalogue (no extra request), and the title counts as opened.
+                    await recommender.captureDetails(details)
+                    if let titleId = details.movieId.id { await recommender.markOpened(titleId) }
 
                     let names = [details.nameRussian] + (details.nameOriginal.map { [$0] } ?? [])
                     let trailer = await RutubeTrailers.find(names: names, year: details.displayYear, series: details.series != nil)

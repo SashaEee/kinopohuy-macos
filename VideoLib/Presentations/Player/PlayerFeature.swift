@@ -93,6 +93,11 @@ struct PlayerFeature {
         fileprivate var pendingResume: Double?
         /// Another voice-over's stream is loading, under its «Озвучка: …» notice.
         fileprivate var isVoiceLoading = false
+        /// Since playback last started or resumed: when, and how far in. The recommender hears of the stretch when it
+        /// stops (a pause, the end, another episode, closing), so it knows rewatches, binges and abandoned titles.
+        fileprivate var playStart: PlayStart?
+        /// This window, for «a player is open»: the background catalogue reading waits meanwhile.
+        fileprivate let windowId = UUID()
 
         init(data: PlayerData) {
             let details = data.details
@@ -265,6 +270,12 @@ struct PlayerFeature {
         }
     }
 
+    /// Where a stretch of playback began.
+    struct PlayStart: Equatable {
+        let at: Double
+        let position: Double
+    }
+
     /// Why it's paused, for the pause screen: by you, by the sleep timer (it comes sooner and darker), or at the end.
     enum PauseReason: Equatable {
         case user
@@ -376,6 +387,7 @@ struct PlayerFeature {
     @Dependency(\.getSeriesSeasonsUseCase) private var getSeriesSeasonsUseCase
     @Dependency(\.defaultDatabase) private var database
     @Dependency(\.continuousClock) private var clock
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -388,6 +400,7 @@ struct PlayerFeature {
             case .task:
                 return .merge(
                     observeDefaults(),
+                    .run { [windowId = state.windowId] _ in await recommender.playerPresence(windowId, true) },
                     .run { [voiceId = state.voiceActing.voiceId] send in
                         let position = try? await database.read { db in
                             try SelectPosition.where { $0.id.eq(voiceId) }.fetchOne(db)
@@ -399,11 +412,15 @@ struct PlayerFeature {
 
             case .disappeared:
                 let report = reportProgress(state, outlivesWindow: true)
+                let session = closeSession(&state, outlivesWindow: true)
 
                 resetState(&state)
 
                 return .merge(
                     report,
+                    session,
+                    // Sent past the window's end, like the report: the background reading must not wait for good.
+                    .run { [windowId = state.windowId] _ in Task { await recommender.playerPresence(windowId, false) } },
                     .cancel(id: CancelID.engine),
                     .cancel(id: CancelID.defaults),
                     .cancel(id: CancelID.track),
@@ -558,10 +575,11 @@ struct PlayerFeature {
                 let seek = state.currentTime
                 let isPlaying = state.isPlaying
                 let dropVoice = cancelVoice(&state)
+                let session = closeSession(&state)
 
                 resetState(&state)
 
-                return .merge(dropVoice, setup(&state, seek: seek, isPlaying: isPlaying))
+                return .merge(dropVoice, session, setup(&state, seek: seek, isPlaying: isPlaying))
 
             case let .subtitlesSelected(language):
                 state.subtitles = language
@@ -643,10 +661,11 @@ struct PlayerFeature {
 
             case .retryTapped:
                 let dropVoice = cancelVoice(&state)
+                let session = closeSession(&state)
 
                 resetState(&state)
 
-                return .merge(dropVoice, setup(&state, seek: nil, isPlaying: true))
+                return .merge(dropVoice, session, setup(&state, seek: nil, isPlaying: true))
 
             case .pauseScreenFired:
                 guard state.canShowPauseScreen, !state.isPauseScreenShown else { return .none }
@@ -692,6 +711,7 @@ struct PlayerFeature {
                 }
 
                 let report = reportProgress(state)
+                let session = closeSession(&state)
                 let seek = state.currentTime
                 let isPlaying = state.isPlaying
                 let qualities = movie.getAvailableQualities()
@@ -710,7 +730,7 @@ struct PlayerFeature {
 
                 resetState(&state)
 
-                return .merge(report, hudTimer(seconds: 2.2), setup(&state, seek: seek, isPlaying: isPlaying))
+                return .merge(report, session, hudTimer(seconds: 2.2), setup(&state, seek: seek, isPlaying: isPlaying))
 
             case .voiceLoaded(_, _, _, _, .failure):
                 state.isVoiceLoading = false
@@ -799,6 +819,7 @@ struct PlayerFeature {
         case let .timeControlStatus(status):
             let wasPlaying = state.isPlaying
 
+            var session = Effect<Action>.none
             switch status {
             case .playing:
                 state.isPlaying = true
@@ -806,13 +827,19 @@ struct PlayerFeature {
                 state.pauseReason = .user
                 // Played again after its end: where it is from now on is saved again.
                 state.endedItem = nil
+                if state.playStart == nil {
+                    state.playStart = PlayStart(at: Date().timeIntervalSince1970, position: state.currentTime)
+                }
             case .paused:
                 // The same status again under the pause screen: nothing changed, keep it.
                 if state.isPauseScreenShown, !state.isPlaying, !state.isLoading { return .none }
 
                 state.isPlaying = false
                 state.isLoading = false
-                if wasPlaying { state.ticksSinceReport = 0 }
+                if wasPlaying {
+                    state.ticksSinceReport = 0
+                    session = closeSession(&state)
+                }
             default:
                 state.isPlaying = false
                 state.isLoading = true
@@ -821,6 +848,7 @@ struct PlayerFeature {
             updateNextTimer(&state)
 
             return .merge(
+                session,
                 status == .paused && wasPlaying ? reportProgress(state) : .none,
                 showCursor(),
                 setMask(!state.isPictureInPictureActive, &state)
@@ -866,16 +894,18 @@ struct PlayerFeature {
 
         case let .failed(error):
             let dropVoice = cancelVoice(&state)
+            let session = closeSession(&state)
 
             resetState(&state)
             state.error = EquatableError(error)
 
-            return .merge(dropVoice, perform { $0.reset() })
+            return .merge(dropVoice, session, perform { $0.reset() })
 
         case .didPlayToEnd:
             let isPictureInPictureActive = state.isPictureInPictureActive
             let advances = state.timer != -1 && state.hasNextEpisode
             let report = reportProgress(state, position: state.duration)
+            let session = closeSession(&state, position: state.duration, completed: true)
 
             if let season = state.season, let episode = state.episode {
                 state.finishedEpisodes.insert(State.episodeKey(season, episode))
@@ -887,7 +917,7 @@ struct PlayerFeature {
 
             state.endedItem = state.itemKey
 
-            return .merge(report, .run { [engine, voiceActing = state.voiceActing, season = state.season, episode = state.episode, duration = state.knownDuration] send in
+            return .merge(report, session, .run { [engine, voiceActing = state.voiceActing, season = state.season, episode = state.episode, duration = state.knownDuration] send in
                 _ = await engine.seek(to: 0)
 
                 // Watched, saved after the jump back so nothing from before it lands later: the title's page ticks
@@ -1092,10 +1122,11 @@ struct PlayerFeature {
     private func switchTrack(to season: MovieSeason, _ episode: MovieEpisode, _ state: inout State) -> Effect<Action> {
         let report = reportProgress(state)
         let dropVoice = cancelVoice(&state)
+        let session = closeSession(&state)
 
         resetState(&state)
 
-        return .merge(report, dropVoice, .run { [engine, voiceActing = state.voiceActing, favs = state.favs] send in
+        return .merge(report, dropVoice, session, .run { [engine, voiceActing = state.voiceActing, favs = state.favs] send in
             await engine.reset()
 
             let result = await Result { try await getMovieVideoUseCase(voiceActing: voiceActing, season: season, episode: episode, favs: favs) }
@@ -1236,6 +1267,38 @@ struct PlayerFeature {
 
         return .run { _ in await deliver() }
             .cancellable(id: CancelID.report(key), cancelInFlight: true)
+    }
+
+    /// Tells the recommender about the stretch played since the last start or resume, and forgets it. It counts as
+    /// completed at the credits (the last 90 s) or when played to the end, as the watched mark does. outlivesWindow:
+    /// sent from closing, it lands even though the player is gone.
+    private func closeSession(_ state: inout State, position: Double? = nil, completed: Bool = false, outlivesWindow: Bool = false) -> Effect<Action> {
+        guard let start = state.playStart else { return .none }
+        state.playStart = nil
+
+        let now = Date().timeIntervalSince1970
+        let duration = state.knownDuration ?? 0
+        let reached = position ?? state.currentTime
+        let to = max(0, duration > 0 ? min(reached, duration) : reached)
+        // A start noted before the first time tick reads 0: it's worked out from how long it played instead.
+        let from = start.position > 0 ? start.position : max(0, to - (now - start.at) * Double(state.rate))
+        let isCompleted = completed || (duration > 0 && to >= duration - 90)
+        let titleId = state.movieId
+        let season = state.season?.seasonId
+        let episode = state.episode?.episodeId
+
+        let deliver: @Sendable () async -> Void = { [recommender] in
+            await recommender.logPlayback(
+                titleId: titleId, season: season, episode: episode, startedAt: start.at, endedAt: now, from: from, to: to,
+                duration: duration, completed: isCompleted,
+            )
+        }
+
+        if outlivesWindow {
+            return .run { _ in Task { await deliver() } }
+        }
+
+        return .run { _ in await deliver() }
     }
 
     private func resetState(_ state: inout State) {

@@ -25,6 +25,7 @@ struct PersonFeature {
     private enum CancelID { case load }
 
     @Dependency(\.getPersonDetailsUseCase) private var getPersonDetailsUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -37,10 +38,13 @@ struct PersonFeature {
             case .reload:
                 state.details = .loading
 
-                return .run { [id = state.id] send in
+                return .run { [id = state.id, name = state.name] send in
                     let result = await Result { try await getPersonDetailsUseCase(id: id) }
 
                     await send(.detailsLoaded(result), animation: .easeInOut)
+
+                    // Their filmography goes into the recommender's catalogue (no extra request).
+                    if case let .success(details) = result { await recommender.captureFilmography(details, personPath: id, name: name) }
                 }
                 .cancellable(id: CancelID.load, cancelInFlight: true)
 

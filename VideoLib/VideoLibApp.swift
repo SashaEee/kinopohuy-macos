@@ -604,6 +604,12 @@ struct VideoLibApp: App {
             }
         }
 
+        // Recommendations, continued: the account's lists as last seen, board sizes, genre slugs, the background
+        // reader's counters and its cache of title pages (RecSchema).
+        migrator.registerMigration("v4") { db in
+            try RecSchema.migrateV4(db)
+        }
+
         try migrator.migrate(database)
 
         return database

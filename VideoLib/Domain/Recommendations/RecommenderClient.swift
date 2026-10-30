@@ -84,6 +84,14 @@ struct RecommenderClient: Sendable {
     var clearAll: @Sendable () async -> Void
     /// Everything about taste as JSON (ratings, feedback, the catalogue ids), for «Экспорт…».
     var exportJSON: @Sendable () async -> Data?
+
+    // More passive capture and the player's presence (defaults keep every existing call site as it is).
+    /// Titles seen in a bookmark folder: the folder's name tells intent («Посмотреть потом») from favourites.
+    var captureBookmarks: @Sendable (_ cards: [MovieSimple], _ folder: String) async -> Void = { _, _ in }
+    /// The feed of new episodes: the series it marks as followed.
+    var captureSeriesUpdates: @Sendable (_ groups: [SeriesUpdateGroup]) async -> Void = { _ in }
+    /// A player window opened (true) or closed (false), by its own id: background reading waits while one is open.
+    var playerPresence: @Sendable (_ windowId: UUID, _ isOpen: Bool) async -> Void = { _, _ in }
 }
 
 extension RecommenderClient: DependencyKey {
