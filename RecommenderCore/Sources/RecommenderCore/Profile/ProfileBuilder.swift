@@ -167,7 +167,8 @@ enum ProfileBuilder {
         for feature in 0..<table.count where shown.contains(table.keys[feature].group) {
             let a = affinity[feature]
             if a > 0.05, positiveSupport[feature] >= 2 {
-                liked.append((feature, a * log2(1 + Double(positiveSupport[feature]))))
+                // The group weight orders equally backed features: a genre reads before a decade.
+                liked.append((feature, a * log2(1 + Double(positiveSupport[feature])) * table.groupWeight[feature]))
             } else if a < -0.1, support[feature] >= 2 {
                 disliked.append((feature, a))
             }
