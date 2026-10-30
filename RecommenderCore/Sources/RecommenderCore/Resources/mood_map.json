@@ -1,0 +1,304 @@
+{
+  "company" : {
+    "couple" : {
+      "effects" : [
+        {
+          "stem" : "мелодрам",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "комеди",
+          "weight" : 0.5
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ],
+        "popularityBoost" : 0.3
+      }
+    },
+    "family" : {
+      "effects" : [
+        {
+          "stem" : "семей",
+          "weight" : 1
+        },
+        {
+          "stem" : "детск",
+          "weight" : 0.9
+        },
+        {
+          "stem" : "мульт",
+          "weight" : 0.8
+        },
+        {
+          "stem" : "анимац",
+          "weight" : 0.8
+        },
+        {
+          "stem" : "приключен",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "фэнтез",
+          "weight" : 0.4
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+          "ужас",
+          "хоррор",
+          "эрот"
+        ],
+        "maxAge" : 12
+      }
+    },
+    "friends" : {
+      "effects" : [
+        {
+          "stem" : "комеди",
+          "weight" : 0.7
+        },
+        {
+          "stem" : "боевик",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "ужас",
+          "weight" : 0.5
+        },
+        {
+          "stem" : "хоррор",
+          "weight" : 0.5
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ],
+        "maxDurationMin" : 130
+      }
+    },
+    "solo" : {
+      "effects" : [
+
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ]
+      }
+    }
+  },
+  "companyWeight" : 0.35,
+  "moodRequirementConfidence" : 0.5,
+  "moodWeight" : 0.6,
+  "moods" : {
+    "cozy" : {
+      "effects" : [
+        {
+          "stem" : "семей",
+          "weight" : 1
+        },
+        {
+          "stem" : "детск",
+          "weight" : 0.8
+        },
+        {
+          "stem" : "комеди",
+          "weight" : 0.8
+        },
+        {
+          "stem" : "мелодрам",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "мульт",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "анимац",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "ужас",
+          "weight" : -1
+        },
+        {
+          "stem" : "хоррор",
+          "weight" : -1
+        },
+        {
+          "stem" : "триллер",
+          "weight" : -0.5
+        },
+        {
+          "stem" : "боевик",
+          "weight" : -0.3
+        },
+        {
+          "stem" : "криминал",
+          "weight" : -0.3
+        },
+        {
+          "stem" : "военн",
+          "weight" : -0.4
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ],
+        "maxAge" : 16,
+        "minQuality" : 7
+      }
+    },
+    "cry" : {
+      "effects" : [
+        {
+          "stem" : "драм",
+          "weight" : 1
+        },
+        {
+          "stem" : "мелодрам",
+          "weight" : 0.9
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ]
+      }
+    },
+    "laugh" : {
+      "effects" : [
+        {
+          "stem" : "комеди",
+          "weight" : 1
+        },
+        {
+          "stem" : "комедийн",
+          "weight" : 1
+        },
+        {
+          "stem" : "ситком",
+          "weight" : 1
+        },
+        {
+          "stem" : "мульт",
+          "weight" : 0.4
+        },
+        {
+          "stem" : "анимац",
+          "weight" : 0.4
+        },
+        {
+          "stem" : "ужас",
+          "weight" : -1
+        },
+        {
+          "stem" : "хоррор",
+          "weight" : -1
+        },
+        {
+          "stem" : "драм",
+          "weight" : -0.3
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ]
+      }
+    },
+    "scare" : {
+      "effects" : [
+        {
+          "stem" : "ужас",
+          "weight" : 1
+        },
+        {
+          "stem" : "хоррор",
+          "weight" : 1
+        },
+        {
+          "stem" : "мистик",
+          "weight" : 0.7
+        },
+        {
+          "stem" : "мистич",
+          "weight" : 0.7
+        },
+        {
+          "stem" : "триллер",
+          "weight" : 0.3
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ]
+      }
+    },
+    "tension" : {
+      "effects" : [
+        {
+          "stem" : "триллер",
+          "weight" : 1
+        },
+        {
+          "stem" : "детектив",
+          "weight" : 0.9
+        },
+        {
+          "stem" : "криминал",
+          "weight" : 0.8
+        },
+        {
+          "stem" : "боевик",
+          "weight" : 0.6
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ]
+      }
+    },
+    "think" : {
+      "effects" : [
+        {
+          "stem" : "драм",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "документ",
+          "weight" : 0.8
+        },
+        {
+          "minQuality" : 7,
+          "stem" : "фантаст",
+          "weight" : 0.6
+        },
+        {
+          "stem" : "биограф",
+          "weight" : 0.5
+        },
+        {
+          "stem" : "истор",
+          "weight" : 0.4
+        }
+      ],
+      "rules" : {
+        "excludeStems" : [
+
+        ],
+        "qualityBoost" : 0.3
+      }
+    }
+  },
+  "peopleWeight" : 0.5,
+  "similarWeight" : 0.6,
+  "version" : 1
+}
