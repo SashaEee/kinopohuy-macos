@@ -203,9 +203,10 @@ private struct WatchingMenu: ViewModifier {
             }
             if let titleId = movie.watchLaterId.id {
                 Divider()
+                // «Бросил» only where the screen can ask about the site's list too («Досмотреть»).
                 TitleFeedbackMenuItems(
                     titleId: titleId,
-                    actions: movie.watched ? [.notMe, .notForMe] : [.continueHidden, .notMe, .notForMe],
+                    actions: movie.watched ? [.notMe, .notForMe] : onAction == nil ? [.continueHidden, .notMe, .notForMe] : [.continueHidden, .dropped, .notMe, .notForMe],
                     perform: onAction
                 )
             }

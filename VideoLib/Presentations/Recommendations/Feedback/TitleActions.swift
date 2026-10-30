@@ -58,6 +58,15 @@ final class RecCardMarks {
 
     private(set) var marks: [String: Mark] = [:]
 
+    /// The latest «Вернуть» (with a serial, so the same title twice still counts as a change): a screen that sorts by
+    /// these marks (e.g. «Досмотреть»'s segments) puts the title back.
+    struct Undone: Equatable {
+        let titleId: String
+        let serial: Int
+    }
+
+    private(set) var lastUndone: Undone?
+
     /// Each title's actions in order: undoing waits for them and reverts them newest first.
     @ObservationIgnored private var done: [String: [Task<TitleActionUndo, Never>]] = [:]
     @ObservationIgnored @Dependency(\.recommender) private var recommender
@@ -104,6 +113,7 @@ final class RecCardMarks {
         withAnimation(.smooth(duration: 0.3)) {
             marks[titleId] = nil
         }
+        lastUndone = Undone(titleId: titleId, serial: (lastUndone?.serial ?? 0) + 1)
         let recommender = recommender
         let tasks = done.removeValue(forKey: titleId) ?? []
         Task {
