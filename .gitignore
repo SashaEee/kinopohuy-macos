@@ -54,3 +54,7 @@ xcuserdata/
 *.bak
 scratch/
 tmp/
+
+# MovieLens data stays local until GroupLens grants permission (see the recommender plan).
+movielens/
+*.movielens.sqlite

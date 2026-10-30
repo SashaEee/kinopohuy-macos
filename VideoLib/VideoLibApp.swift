@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Defaults
 import Dependencies
+import GRDB
 import Kingfisher
 import Sparkle
 import SQLiteData
@@ -507,6 +508,99 @@ struct VideoLibApp: App {
                 t.column("position", .real).notNull()
                 t.column("duration", .real).notNull()
                 t.column("updatedAt", .real).notNull()
+            }
+        }
+
+        // Recommendations: the local catalogue of titles seen on the site, the session log, ratings and feedback,
+        // impressions and the cached Home. All of it stays on this Mac.
+        migrator.registerMigration("v3") { db in
+            try db.create(table: "title_meta", options: [.ifNotExists, .strict]) { t in
+                t.column("id", .text).notNull().primaryKey()
+                t.column("path", .text).notNull()
+                t.column("level", .text).notNull()
+                t.column("kind", .text)
+                t.column("primaryGenre", .text)
+                t.column("name", .text).notNull()
+                t.column("originalName", .text)
+                t.column("year", .integer)
+                t.column("kpId", .integer)
+                t.column("imdbId", .text)
+                // The whole RecommenderCore.TitleFeatures as JSON (the columns above are for lookups and indexes).
+                t.column("features", .text).notNull()
+                t.column("fetchedAt", .real).notNull()
+            }
+            try db.create(index: "title_meta_kp", on: "title_meta", columns: ["kpId"], ifNotExists: true)
+            try db.create(index: "title_meta_imdb", on: "title_meta", columns: ["imdbId"], ifNotExists: true)
+            try db.create(index: "title_meta_kind_genre", on: "title_meta", columns: ["kind", "primaryGenre"], ifNotExists: true)
+
+            try db.create(virtualTable: "title_fts", ifNotExists: true, using: GRDB.FTS5()) { t in
+                t.tokenizer = .unicode61(diacritics: .remove)
+                t.column("id").notIndexed()
+                t.column("name")
+                t.column("originalName")
+            }
+
+            try db.create(table: "board_member", options: [.ifNotExists, .strict]) { t in
+                t.column("boardKey", .text).notNull()
+                t.column("titleId", .text).notNull()
+                t.column("rank", .integer)
+                t.column("name", .text).notNull()
+                t.column("updatedAt", .real).notNull()
+                t.primaryKey(["boardKey", "titleId"])
+            }
+            try db.create(index: "board_member_title", on: "board_member", columns: ["titleId"], ifNotExists: true)
+
+            try db.create(table: "watch_event", options: [.ifNotExists, .strict]) { t in
+                t.autoIncrementedPrimaryKey("rowid")
+                t.column("titleId", .text).notNull()
+                t.column("acting", .text)
+                t.column("season", .text)
+                t.column("episode", .text)
+                t.column("startedAt", .real).notNull()
+                t.column("endedAt", .real).notNull()
+                t.column("fromPos", .real).notNull()
+                t.column("toPos", .real).notNull()
+                t.column("duration", .real).notNull()
+                t.column("completed", .integer).notNull()
+            }
+            try db.create(index: "watch_event_title", on: "watch_event", columns: ["titleId"], ifNotExists: true)
+
+            try db.create(table: "user_rating", options: [.ifNotExists, .strict]) { t in
+                t.column("titleId", .text).notNull().primaryKey()
+                t.column("level", .real).notNull()
+                t.column("source", .text).notNull()
+                t.column("createdAt", .real).notNull()
+                t.column("sentToSite", .integer).notNull().defaults(to: 0)
+            }
+
+            try db.create(table: "title_feedback", options: [.ifNotExists, .strict]) { t in
+                t.column("titleId", .text).notNull()
+                t.column("kind", .text).notNull()
+                t.column("createdAt", .real).notNull()
+                t.column("until", .real)
+                t.primaryKey(["titleId", "kind"])
+            }
+
+            try db.create(table: "taste_override", options: [.ifNotExists, .strict]) { t in
+                t.column("feature", .text).notNull().primaryKey()
+                t.column("mode", .text).notNull()
+                t.column("until", .real)
+            }
+
+            try db.create(table: "rec_impression", options: [.ifNotExists, .strict]) { t in
+                t.autoIncrementedPrimaryKey("rowid")
+                t.column("titleId", .text).notNull()
+                t.column("surface", .text).notNull()
+                t.column("shownAt", .real).notNull()
+                t.column("opened", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(index: "rec_impression_title", on: "rec_impression", columns: ["titleId"], ifNotExists: true)
+
+            try db.create(table: "rec_cache", options: [.ifNotExists, .strict]) { t in
+                t.column("surface", .text).notNull().primaryKey()
+                t.column("payload", .text).notNull()
+                t.column("profileHash", .text).notNull()
+                t.column("builtAt", .real).notNull()
             }
         }
 
