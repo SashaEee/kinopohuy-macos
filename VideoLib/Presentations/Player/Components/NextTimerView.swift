@@ -3,12 +3,29 @@ import SwiftUI
 
 /// Near the end of an episode: the next one (with its name from the schedule), with a ring running out until it
 /// starts by itself; a press starts it now, «Смотреть титры» puts the card away for the rest of this one. It steps
-/// aside while the pause screen is up.
+/// aside while the pause screen is up. Under it, at a film's credits or a season's finale, «Как вам «…»?» (see
+/// PostPlayRatingView), which stays over the pause screen too.
 struct NextTimerView: View {
     @Environment(StoreOf<PlayerFeature>.self) private var store
     @Environment(\.kpMetrics) private var metrics
 
     var body: some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            nextCard
+
+            PostPlayRatingView()
+                .padding(.top, nextCardShown ? 12 : top)
+                .padding(.trailing, KP.gutter)
+                .animation(.spring(response: 0.45, dampingFraction: 0.85), value: nextCardShown)
+        }
+    }
+
+    /// The next-episode card is on screen (not under the pause screen).
+    private var nextCardShown: Bool {
+        store.nextTimer != nil && store.isSeries && store.nextEpisode != nil && !store.isPauseScreenShown
+    }
+
+    private var nextCard: some View {
         Group {
             if let nextTimer = store.nextTimer, store.isSeries, let (season, episode) = store.nextEpisode {
                 HStack(alignment: .center, spacing: 10) {

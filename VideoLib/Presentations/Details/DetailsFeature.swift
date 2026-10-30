@@ -37,6 +37,9 @@ struct DetailsFeature {
         /// In any of your bookmark folders (signed in): «В закладках» on the button. nil until it's known.
         var isBookmarked: Bool?
 
+        /// «Не моё · Нравится · Обожаю» and «…» next to the site's rating.
+        var feedback: FeedbackBarFeature.State
+
         @Presents var alert: AlertState<Action.Alert>?
         @Presents var destination: Destination.State?
 
@@ -45,6 +48,7 @@ struct DetailsFeature {
             title = movie.name
             poster = movie.poster
             self.autoWatch = autoWatch
+            feedback = FeedbackBarFeature.State(titleId: movie.movieId.id)
         }
 
         var movieId: String {
@@ -69,6 +73,7 @@ struct DetailsFeature {
         case watchTapped
         case downloadTapped
         case openExternalPlayerTapped
+        case feedback(FeedbackBarFeature.Action)
         case push(Destinations)
         case delegate(Delegate)
         case alert(PresentationAction<Alert>)
@@ -86,9 +91,14 @@ struct DetailsFeature {
     @Dependency(\.getMovieDetailsUseCase) private var getMovieDetailsUseCase
     @Dependency(\.getMovieBookmarksUseCase) private var getMovieBookmarksUseCase
     @Dependency(\.rateUseCase) private var rateUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
+
+        Scope(state: \.feedback, action: \.feedback) {
+            FeedbackBarFeature()
+        }
 
         Reduce { state, action in
             switch action {
@@ -195,6 +205,12 @@ struct DetailsFeature {
                 return .run { send in
                     let result = await Result { try await rateUseCase(id: id, rating: rating) }
 
+                    // The site never gives its rating back: a copy here, on the three-level scale, lights the bar.
+                    if case .success(.some) = result, let level = SiteRatingMirror.level(for: rating) {
+                        await recommender.rate(id, level, .site)
+                        await send(.feedback(.reload))
+                    }
+
                     await send(.rated(result), animation: .easeInOut)
                 }
                 .cancellable(id: CancelID.rate, cancelInFlight: true)
@@ -264,7 +280,7 @@ struct DetailsFeature {
             case let .push(route):
                 return .send(.delegate(.push(route)))
 
-            case .alert, .destination, .delegate:
+            case .alert, .destination, .delegate, .feedback:
                 return .none
             }
         }
