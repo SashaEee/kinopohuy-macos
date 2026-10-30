@@ -18,6 +18,8 @@ struct TasteOnboardingFeature {
     @ObservableState
     struct State: Equatable {
         var step: Step = .intro
+        /// The last step change went on (or back, with «Назад»): the steps slide that way.
+        var movingForward = true
         var isLoading = true
         /// «Детективы · Скандинавия · 2010-е · Финчер · Сериалы чаще фильмов».
         var tasteChips: [String] = []
@@ -56,6 +58,11 @@ struct TasteOnboardingFeature {
         /// What the current title was already rated, if it was (the card says so).
         var currentPrevious: TasteLevel? {
             current.flatMap { TasteLevel(stored: previousRatings[$0.id]) }
+        }
+
+        mutating func go(_ next: Step) {
+            movingForward = next.rawValue >= step.rawValue
+            step = next
         }
     }
 
@@ -117,7 +124,7 @@ struct TasteOnboardingFeature {
                 return .none
 
             case .startTapped:
-                state.step = state.stack.isEmpty ? .exclusions : .stack
+                state.go(state.stack.isEmpty ? .exclusions : .stack)
 
                 return .none
 
@@ -132,7 +139,7 @@ struct TasteOnboardingFeature {
                 state.answers.append(State.Answer(titleId: title.id, choice: choice))
                 state.index += 1
                 if state.index >= state.stack.count {
-                    state.step = .exclusions
+                    state.go(.exclusions)
                 }
 
                 guard let level = choice.tasteLevel else { return .none }
@@ -145,7 +152,7 @@ struct TasteOnboardingFeature {
                 guard let last = state.answers.popLast() else { return .none }
 
                 state.index = max(0, state.index - 1)
-                state.step = .stack
+                state.go(.stack)
 
                 guard last.choice != .dontRemember else { return .none }
 
@@ -163,9 +170,9 @@ struct TasteOnboardingFeature {
                 case .intro:
                     state.isFinished = true
                 case .stack:
-                    state.step = .exclusions
+                    state.go(.exclusions)
                 case .exclusions:
-                    state.step = .done
+                    state.go(.done)
                 case .done:
                     state.isFinished = true
                 }
@@ -191,7 +198,7 @@ struct TasteOnboardingFeature {
                 Defaults[.recExcludedKinds] = applied.kinds
                 Defaults[.recExcludedGenres] = applied.genres
                 Defaults[.recMaxAge] = state.maxAge.rawValue
-                state.step = .done
+                state.go(.done)
 
                 // Home redraws with all of it by the time the sheet is gone.
                 return .run { _ in

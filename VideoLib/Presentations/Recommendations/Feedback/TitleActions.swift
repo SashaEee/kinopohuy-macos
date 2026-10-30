@@ -135,6 +135,14 @@ final class RecCardMarks {
         done[titleId] = nil
     }
 
+    /// «Очистить данные рекомендаций»: no card says otherwise any more.
+    func forgetAll() {
+        withAnimation(.smooth(duration: 0.3)) {
+            marks = [:]
+        }
+        done = [:]
+    }
+
     private func record(_ action: TitleAction, for titleId: String) {
         let recommender = recommender
         let previous = done[titleId]?.last

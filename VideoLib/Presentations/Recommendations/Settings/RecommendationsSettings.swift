@@ -367,6 +367,7 @@ struct RecommendationsSettings: View {
             Button(role: .destructive) {
                 Task {
                     await recommender.clearAll()
+                    RecCardMarks.shared.forgetAll()
                     await refreshProfile()
                     show(.reset("Данные рекомендаций очищены"))
                 }

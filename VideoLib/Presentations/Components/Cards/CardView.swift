@@ -70,7 +70,8 @@ struct CardView: View {
             ratingColor: movie.cat?.rating.map(KP.ratingColor) ?? .black.opacity(0.62),
             note: movie.info?.title,
             progress: filmProgress,
-            width: width
+            width: width,
+            interactive: RecCardMarks.shared.mark(movie.movieId.id) == nil
         ) {
             KPRemoteImage(url: movie.poster, downsample: KP.cardPosterPixels())
         }

@@ -14,7 +14,6 @@ struct TasteOnboardingView: View {
 
     /// The answer the current card is flying off with (then the next one comes in).
     @State private var flying: OnboardingChoice?
-    @State private var forward = true
 
     private static let posterSize = CGSize(width: 212, height: 318)
     private static var posterPixels: CGSize { CGSize(width: posterSize.width * 2, height: posterSize.height * 2) }
@@ -71,13 +70,18 @@ struct TasteOnboardingView: View {
             let urls = store.stack.compactMap { $0.poster.flatMap(URL.init(string:)) }
             ImagePrefetcher(urls: urls, options: [.processor(DownsamplingImageProcessor(size: Self.posterPixels))]).start()
         }
-        .onChange(of: store.step) { old, new in
-            forward = new.rawValue >= old.rawValue
+        .background {
+            // Esc closes it; what was answered stays.
+            Button("") { store.send(.skipAllTapped) }
+                .keyboardShortcut(.cancelAction)
+                .opacity(0)
+                .accessibilityHidden(true)
         }
     }
 
     private var stepTransition: AnyTransition {
-        reduceMotion ? .opacity : .asymmetric(
+        let forward = store.movingForward
+        return reduceMotion ? .opacity : .asymmetric(
             insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
             removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)
         )
@@ -272,7 +276,24 @@ struct TasteOnboardingView: View {
     private func card(_ title: TitleFeatures) -> some View {
         let offset = flyOffset(flying)
         return VStack(spacing: 12) {
-            KPRemoteImage(url: title.poster, downsample: Self.posterPixels, immediate: true)
+            ZStack {
+                // A title known only from a list card may have no picture: its name on a quiet tile instead.
+                LinearGradient(colors: [KP.surfaceHigh, KP.surface], startPoint: .top, endPoint: .bottom)
+                VStack(spacing: 10) {
+                    Image(systemName: "film")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(KP.fg38)
+                    Text(verbatim: title.name)
+                        .font(KP.font(15, .bold))
+                        .foregroundStyle(KP.fg70)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(4)
+                }
+                .padding(18)
+                if let poster = title.poster, !poster.isEmpty {
+                    KPRemoteImage(url: poster, downsample: Self.posterPixels, immediate: true)
+                }
+            }
                 .frame(width: Self.posterSize.width, height: Self.posterSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))

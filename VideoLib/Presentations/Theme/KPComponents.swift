@@ -20,6 +20,8 @@ struct KPPosterCard<Poster: View>: View {
     var width: CGFloat?
     /// Height over width: 1.5 for a poster, 0.6 for a collection's wide cover.
     var aspect: CGFloat = 1.5
+    /// false: it doesn't grow or ring under the pointer (a card dimmed by «Скрыть» or «Не моё», under its note).
+    var interactive = true
     @ViewBuilder var poster: () -> Poster
 
     @State private var hover = false
@@ -64,11 +66,11 @@ struct KPPosterCard<Poster: View>: View {
                     RoundedRectangle(cornerRadius: KP.posterRadius + 4, style: .continuous)
                         .strokeBorder(KP.fg, lineWidth: 3)
                         .padding(-5)
-                        .opacity(hover ? 1 : 0)
+                        .opacity(lifted ? 1 : 0)
                 }
                 // A shadow only under the pointer: a hundred soft shadows make scrolling slow.
-                .shadow(color: .black.opacity(hover ? 0.6 : 0), radius: hover ? 22 : 0, y: hover ? 12 : 0)
-                .scaleEffect(hover ? 1.05 : 1, anchor: .bottom)
+                .shadow(color: .black.opacity(lifted ? 0.6 : 0), radius: lifted ? 22 : 0, y: lifted ? 12 : 0)
+                .scaleEffect(lifted ? 1.05 : 1, anchor: .bottom)
 
             if title != nil || subtitle != nil {
                 VStack(alignment: .leading, spacing: 3) {
@@ -89,6 +91,7 @@ struct KPPosterCard<Poster: View>: View {
             }
         }
         .frame(width: width)
+        .animation(.spring(response: 0.32, dampingFraction: 0.72), value: interactive)
         .contentShape(Rectangle())
         .onHover { inside in
             // Cards gliding under a still pointer while scrolling don't light up (leaving always counts).
@@ -97,6 +100,11 @@ struct KPPosterCard<Poster: View>: View {
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.72), value: hover)
         .zIndex(hover ? 1 : 0)
+    }
+
+    /// Grown, ringed and shadowed: under the pointer, unless it's a card that stays still.
+    private var lifted: Bool {
+        hover && interactive
     }
 }
 

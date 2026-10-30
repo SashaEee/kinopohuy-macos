@@ -63,7 +63,8 @@ struct WatchingLaterCardView: View {
                 kind: movie.watched ? nil : movie.episodesLeft,
                 note: note,
                 progress: progress?.fraction,
-                width: fixedWidth ?? metrics.card
+                width: fixedWidth ?? metrics.card,
+                interactive: RecCardMarks.shared.mark(movie.watchLaterId.id) == nil
             ) {
                 // Decoded at the card's fixed pixel size whatever the tier, so the title's page finds it in memory.
                 KPRemoteImage(url: movie.cover, downsample: KP.cardPosterPixels())

@@ -56,8 +56,7 @@ struct FeedbackBarFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                guard !state.isLoaded else { return .none }
-
+                // Every time: a card's menu or the player may have rated it since.
                 return .send(.reload)
 
             case .reload:
