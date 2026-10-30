@@ -120,31 +120,59 @@ private struct PickSession {
         case rating, mood, duration, kind, time, years, countries
     }
 
-    /// Tries the intent as asked, then drops constraints one by one; widens the pool last.
+    /// Tries the intent as asked, then drops constraints in the plan's order until something fits; then puts back
+    /// every dropped constraint that wasn't the problem (most important first), so «убрал …» names only what had to
+    /// go. Widens the pool last.
     private mutating func solve() -> (candidates: [Candidate], intent: WatchIntent, relaxed: [Relaxation]) {
         var pools: [[PickPool]] = [[request.pool]]
         if request.pool != .mix { pools.append([.mix]) }
         pools.append([.own, .mix, .discover])
         var widened = false
         for poolSet in pools {
-            var intent = request.intent
-            var relaxed: [Relaxation] = []
-            var candidates = shortlist(for: intent, pools: poolSet)
+            var dropped: [Step] = []
+            var built = (intent: request.intent, relaxed: [Relaxation]())
+            var candidates = shortlist(for: built.intent, pools: poolSet)
             for step in Step.allCases where candidates.isEmpty {
-                guard let next = relax(intent, step) else { continue }
-                intent = next.intent
-                relaxed += next.relaxed
-                candidates = shortlist(for: intent, pools: poolSet)
+                let trial = relaxing(dropped + [step])
+                guard trial.relaxed.count > built.relaxed.count else { continue }
+                dropped.append(step)
+                built = trial
+                candidates = shortlist(for: built.intent, pools: poolSet)
+            }
+            if !candidates.isEmpty, dropped.count > 1 {
+                for step in dropped.dropLast().reversed() {
+                    let fewer = dropped.filter { $0 != step }
+                    let trial = relaxing(fewer)
+                    let restored = shortlist(for: trial.intent, pools: poolSet)
+                    if !restored.isEmpty {
+                        dropped = fewer
+                        built = trial
+                        candidates = restored
+                    }
+                }
             }
             if !candidates.isEmpty {
+                var relaxed = built.relaxed
                 if widened {
                     relaxed.append(Relaxation(field: .familiarity, label: "добавил подходящее из каталога"))
                 }
-                return (candidates, intent, relaxed)
+                return (candidates, built.intent, relaxed)
             }
             widened = true
         }
         return ([], request.intent, [])
+    }
+
+    /// The request's intent with these steps applied, in the plan's order, and what each one dropped.
+    private func relaxing(_ steps: [Step]) -> (intent: WatchIntent, relaxed: [Relaxation]) {
+        var intent = request.intent
+        var relaxed: [Relaxation] = []
+        for step in Step.allCases where steps.contains(step) {
+            guard let next = relax(intent, step) else { continue }
+            intent = next.intent
+            relaxed += next.relaxed
+        }
+        return (intent, relaxed)
     }
 
     private func relax(_ intent: WatchIntent, _ step: Step) -> (intent: WatchIntent, relaxed: [Relaxation])? {
