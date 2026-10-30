@@ -1,0 +1,56 @@
+# ── Never publish ─────────────────────────────────────────────────────────────────────────────────────────────────
+# Local folders are excluded in .git/info/exclude. These patterns guard secrets wherever they turn up.
+*.wgt
+secrets.js
+**/server/config.js
+
+# Signing and update keys: the Sparkle private key must live offline, never in this folder.
+*.priv
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.p8
+*.keychain*
+*ed25519*
+*.env
+.env*
+.netrc
+
+# ── Build output ──────────────────────────────────────────────────────────────────────────────────────────────────
+# scripts/release.sh writes to build/release/; the DMG and the zip go to GitHub Releases, not into git.
+build/
+DerivedData/
+*.dmg
+*.zip
+*.xcarchive
+*.dSYM/
+*.dSYM.zip
+*.ipa
+
+# Swift Package Manager (Package.resolved inside the .xcodeproj stays tracked: it pins the versions).
+.build/
+.swiftpm/
+/Packages/
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# ── Scratch ───────────────────────────────────────────────────────────────────────────────────────────────────────
+.DS_Store
+._*
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+*.orig
+*.rej
+*.bak
+scratch/
+tmp/

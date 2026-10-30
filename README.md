@@ -1,0 +1,254 @@
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/wordmark-dark.png">
+  <img src="docs/media/wordmark-light.png" width="440" alt="КиноПохуй">
+</picture>
+
+### Кино на Mac. Без лишнего.
+
+Нативное приложение онлайн-кинотеатра для macOS: каталог как у больших стримингов, свой плеер с экраном паузы, загрузки и автообновления.<br>
+Неофициальное: видео не размещает, адрес сайта вы вводите сами.
+
+[![Версия](https://img.shields.io/github/v/release/SashaEee/kinopohuy-macos?label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=FF7A00)](https://github.com/SashaEee/kinopohuy-macos/releases/latest)
+[![Скачивания](https://img.shields.io/github/downloads/SashaEee/kinopohuy-macos/total?label=%D1%81%D0%BA%D0%B0%D1%87%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9&color=FF7A00)](https://github.com/SashaEee/kinopohuy-macos/releases)
+![macOS 15+](https://img.shields.io/badge/macOS-15%2B-111?logo=apple&logoColor=white)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-Swift_6-F05138?logo=swift&logoColor=white)
+[![Лицензия MIT](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-111)](LICENSE)
+
+<br>
+
+[![Скачать для macOS](https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C_%D0%B4%D0%BB%D1%8F_macOS-DMG-FF7A00?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg)
+&nbsp;
+[![Поддержать на Boosty](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-Boosty-F15F2C?style=for-the-badge&logo=boosty&logoColor=white)](https://boosty.to/sanchella_zzz)
+
+<sub>macOS 15 и новее · Apple Silicon и Intel · <a href="#установка">как установить</a> · <a href="https://github.com/SashaEee/kinopohuy-macos/releases">все версии</a></sub>
+
+</div>
+
+<br>
+
+<p align="center">
+  <img src="docs/media/screen-home.jpg" width="100%" alt="Главная КиноПохуй: большая заставка с фильмом из трендов и ряд «Продолжить просмотр» с постерами и номерами серий">
+</p>
+
+## Что это
+
+Сайт с фильмами и сериалами, который вы и так открываете в браузере, но в виде настоящего приложения для Mac. Тёмный интерфейс в духе Netflix и Apple TV, собственный плеер вместо веб-плеера, история и закладки из вашего аккаунта на сайте. Приложение берёт страницы сайта, адрес которого вы указали, и показывает их по-своему: ни видео, ни адреса сайта внутри нет.
+
+- **Нативное, а не вкладка браузера.** SwiftUI, плавная прокрутка, клавиатура и медиаклавиши, отдельное окно плеера.
+- **Плеер, который приятно ставить на паузу.** Через несколько секунд паузы появляются название, серия, озвучка и описание, как на большом стриминге.
+- **Всё в один клик.** «Продолжить просмотр» открывает плеер сразу с того места, где вы остановились.
+- **Ни телеметрии, ни трекеров.** Открытый код. Приложение можно собрать самому одной командой.
+
+## Как это выглядит
+
+<p align="center">
+  <img src="docs/media/screen-title.jpg" width="100%" alt="Страница сериала «Сёгун»: обложка, рейтинги, описание, кнопка «Смотреть», выбор озвучки с долей зрителей и серии плитками">
+  <br><sub><b>Страница сериала.</b> Озвучки с долей зрителей, серии плитками, продолжение с нужной минуты.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/screen-pause.jpg" width="49%" alt="Экран паузы: название сериала, сезон и серия, название главы, озвучка и описание поверх затемнённого кадра">
+  <img src="docs/media/screen-player.jpg" width="49%" alt="Плеер: время окончания, перемотка на 10 секунд, кнопка «Серии», шкала прогресса">
+  <br><sub><b>Экран паузы и плеер.</b> Смена серии и озвучки без выхода, «закончится в 20:56», картинка в картинке.</sub>
+</p>
+
+## Возможности
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Главная и каталог**
+- Большая заставка: тайтлы из трендов сменяют друг друга.
+- «Продолжить просмотр»: где вы остановились, а для начатого на этом Mac — полоска прогресса и «Осталось N мин».
+- «Новые серии» по вашим сериалам и ряд «Похоже на…».
+- Каталог с фильтрами, подборки, поиск по мере набора.
+- Закладки и «Досмотреть» из аккаунта на сайте.
+
+</td>
+<td width="50%" valign="top">
+
+**Страница фильма или сериала**
+- Озвучки прямо на странице, с долей зрителей и пометками сайта.
+- Сезоны и серии плитками: просмотренные отмечены, у начатых прогресс.
+- «Продолжить с 12:34» или «С начала», время окончания фильма.
+- Расписание серий, трейлеры, актёры, оценки, комментарии.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Плеер**
+- Экран паузы: сезон, серия и её название, озвучка и описание фильма или сериала.
+- Смена озвучки и серии на лету, следующая серия с отсчётом.
+- Картинка в картинке, AirPlay, пространственное аудио, субтитры, качество, таймер сна.
+- Стеклянные кнопки Liquid Glass на macOS 26 и новее.
+- Пробел, стрелки, <kbd>F</kbd>, <kbd>M</kbd>, медиаклавиши. Или откройте во внешнем плеере: IINA, Infuse, mpv, VLC.
+
+</td>
+<td width="50%" valign="top">
+
+**Остальное**
+- Загрузки для офлайна через встроенный aria2: до 10 сразу, ход виден в строке меню.
+- Компактная раскладка для MacBook Air и Pro 14″: первый ряд постеров виден сразу.
+- Мастер первого запуска и настройки (<kbd>⌘</kbd> <kbd>,</kbd>).
+- Автообновление через Sparkle, каждое обновление проверяется подписью.
+- Приложение обращается только к сайту, адрес которого вы указали (и к серверам, с которых он отдаёт видео и картинки), к GitHub (лента и файлы обновлений) и к Rutube за трейлерами.
+
+</td>
+</tr>
+</table>
+
+## Установка
+
+1. Скачайте [**KinoPohuy.dmg**](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg) из последнего релиза.
+2. Откройте его и перетащите «КиноПохуй» в «Программы».
+3. Запустите приложение. macOS скажет, что не может проверить разработчика: нажмите «Готово».
+4. Откройте **Системные настройки → Конфиденциальность и безопасность**, прокрутите вниз и нажмите **«Всё равно открыть»** рядом с «КиноПохуй», затем подтвердите паролем.
+
+Это нужно один раз. Начиная с macOS 15 старый способ «Ctrl‑клик → Открыть» больше не работает. То же самое одной командой в Терминале:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/КиноПохуй.app"
+```
+
+> [!NOTE]
+> Почему так: приложение подписано без платного сертификата Apple Developer ID, поэтому macOS не может его проверить. Код открыт, а суммы SHA-256 каждого релиза лежат в `SHA256SUMS.txt` рядом с файлами. Сертификат — первая цель [донатов](#поддержать-проект).
+
+**Обновления** приходят сами: раз в сутки приложение проверяет новую версию и предлагает установить её. Настроить можно в **Настройки → Обновления**.
+
+### Первый запуск
+
+1. Примите условия использования.
+2. Введите адрес сайта и нажмите «Проверить». Подойдёт и ссылка на любую страницу сайта: приложение возьмёт из неё адрес само. В приложение адрес не встроен, мы его не публикуем и не храним.
+3. По желанию войдите в свой аккаунт на сайте. Тогда появятся закладки, «Продолжить просмотр» и новые серии.
+
+Адрес можно сменить в любой момент: **Настройки → Основное → Сайт**. Премиум оформляется на самом сайте: приложение показывает только то, что доступно вашему аккаунту.
+
+## Вопросы и ответы
+
+<details>
+<summary><b>Сколько стоит приложение?</b></summary>
+
+Нисколько: это открытый проект под лицензией MIT. Платных функций в приложении нет и не будет. Условия доступа к фильмам и премиум определяет сам сайт.
+</details>
+
+<details>
+<summary><b>С каким сайтом оно работает и где взять адрес?</b></summary>
+
+С русскоязычным онлайн-кинотеатром, который мы намеренно не называем. Адрес тоже не публикуем и не встраиваем: его вводите вы, и он хранится только на вашем Mac.
+</details>
+
+<details>
+<summary><b>Это безопасно?</b></summary>
+
+Весь код открыт, и приложение можно собрать самому. Аналитики, трекеров и сбора данных нет. Места просмотра и история хранятся на этом Mac; если вы вошли в аккаунт, сайт, как и в браузере, тоже запоминает, что вы смотрели. Логин и пароль уходят только на сайт, приложение хранит лишь cookies сессии, как браузер.
+</details>
+
+<details>
+<summary><b>Почему macOS ругается при первом запуске?</b></summary>
+
+У приложения нет платного сертификата Apple Developer ID и нотаризации. Один раз разрешите запуск, как описано в разделе <a href="#установка">«Установка»</a>. Донаты помогут купить сертификат, чтобы приложение открывалось без этого шага.
+</details>
+
+<details>
+<summary><b>Как обновляться?</b></summary>
+
+Никак, приложение обновится само: Sparkle предложит новую версию и установит её после перезапуска. Если идут загрузки, приложение спросит и по умолчанию подождёт, пока они закончатся. Проверить вручную можно в меню «КиноПохуй» → «Проверить наличие обновлений…». Если после обновления macOS переспросит, открывать ли приложение, нажмите «Открыть»: настройки и история останутся.
+</details>
+
+<details>
+<summary><b>Почему не в App Store?</b></summary>
+
+Клиент стороннего сайта с видео не пройдёт проверку App Store, а GitHub оставляет код открытым.
+</details>
+
+<details>
+<summary><b>Будут ли версии для телевизора, iPad или Windows?</b></summary>
+
+Версия для телевизоров Samsung в работе. Чтобы не пропустить, нажмите <b>Watch → Custom → Releases</b> вверху этой страницы. Планов на iPad и Windows пока нет.
+</details>
+
+<details>
+<summary><b>Куда писать о багах и идеях?</b></summary>
+
+В <a href="https://github.com/SashaEee/kinopohuy-macos/issues/new/choose">Issues</a>: там есть формы «Ошибка» и «Идея». Перед отправкой уберите из скриншотов и логов адрес сайта.
+</details>
+
+## Поддержать проект
+
+«КиноПохуй» делается в свободное время. Если он вам нравится, поддержите разработку. Донат — это спасибо, а не плата: все функции доступны всем.
+
+**Первая цель — сертификат Apple Developer ID** ($99 в год): с ним приложение будет открываться сразу, без «Всё равно открыть» в настройках. Дальше — новые функции и версия для телевизоров.
+
+<table>
+<tr>
+<td valign="middle">
+
+**Boosty** — картой российского банка, разово или подпиской:
+
+[![Поддержать на Boosty](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-Boosty-F15F2C?style=for-the-badge&logo=boosty&logoColor=white)](https://boosty.to/sanchella_zzz)
+
+**USDT в сети TON** — из Telegram Wallet или любого TON-кошелька:
+
+```text
+UQC3PZ6C2Bhte2-pvdbT9a5c54tSNynDcz080vKHJ3UB8i2f
+```
+
+> **Только USDT в сети TON.** Другие монеты и сети (TRC-20, ERC-20) на этот адрес не дойдут.
+
+</td>
+<td width="190" align="center" valign="middle">
+<img src="docs/media/qr-usdt-ton.png" width="170" alt="QR-код адреса USDT в сети TON"><br>
+<sub>USDT · TON</sub>
+</td>
+</tr>
+</table>
+
+То же самое есть в приложении: **Настройки → О программе → Поддержать проект**.
+
+**Звезда на GitHub — тоже поддержка:** так проект находят другие.
+
+## Сборка из исходников
+
+Для сборки нужны macOS 15.6 или новее и Xcode 26 или новее (проверено на Xcode 27.2); готовое приложение работает на macOS 15 и новее. Аккаунт разработчика Apple не нужен.
+
+```bash
+git clone https://github.com/SashaEee/kinopohuy-macos.git
+cd kinopohuy-macos
+./build-mac.sh    # соберёт Release для этого Mac и установит /Applications/КиноПохуй.app
+```
+
+Или откройте `VideoLib.xcodeproj` в Xcode, выберите схему `VideoLib` и нажмите Run. `VideoLib` — внутреннее имя проекта, приложение называется «КиноПохуй». Как устроен код и как прислать изменения — в [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Отказ от ответственности
+
+- «КиноПохуй» — неофициальное приложение. Оно **не связано** с сайтом, его владельцами и правообладателями.
+- У проекта **нет своих серверов**: приложение ничего не размещает и не распространяет. Оно показывает страницы сайта, которые вы открываете сами, так же как браузер, а загрузки для офлайна сохраняются только на вашем Mac.
+- **Адрес сайта указываете вы.** В приложении и в этом репозитории его нет.
+- Премиум оформляется на самом сайте: приложение показывает только то, что доступно вашему аккаунту.
+- Соблюдайте **законы своей страны** и правила сайта.
+- Приложение предоставляется **«как есть»**, без каких-либо гарантий (см. [LICENSE](LICENSE)).
+
+Правообладателям: как связаться, написано в [SECURITY.md](SECURITY.md#правообладателям). Мы отвечаем быстро.
+
+## Благодарности и лицензии
+
+- Код «КиноПохуй» распространяется под лицензией [MIT](LICENSE).
+- Проект вырос из открытого кода voidboost (MIT, © 2025 voidboost). Спасибо автору: его уведомление об авторских правах сохранено в [LICENSE](LICENSE).
+- [aria2](https://github.com/aria2/aria2) 1.37.0 — встроенный загрузчик, GNU GPL v2 или новее. Собран из официального архива скриптом [`scripts/aria2/build.sh`](scripts/aria2/build.sh); архив с исходниками приложен к каждому релизу.
+- [Inter](https://github.com/rsms/inter) — шрифт интерфейса, SIL Open Font License 1.1.
+- Пакеты Swift: [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) и другие библиотеки Point-Free, [Alamofire](https://github.com/Alamofire/Alamofire), [Kingfisher](https://github.com/onevcat/Kingfisher), [GRDB](https://github.com/groue/GRDB.swift), [SQLiteData](https://github.com/pointfreeco/sqlite-data), [Sparkle](https://github.com/sparkle-project/Sparkle), [SwiftSoup](https://github.com/scinfu/SwiftSoup), [Pow](https://github.com/EmergeTools/Pow), [Defaults](https://github.com/sindresorhus/Defaults), [SwiftUI-Flow](https://github.com/tevelee/SwiftUI-Flow), [LRUCache](https://github.com/nicklockwood/LRUCache), [Swift Collections](https://github.com/apple/swift-collections), [Swift Algorithms](https://github.com/apple/swift-algorithms).
+
+Полный список с версиями и текстами лицензий — в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) и в самом приложении: **О программе → Лицензии**.
+
+---
+
+## English
+
+**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
+
+macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project on [Boosty](https://boosty.to/sanchella_zzz) or with USDT on TON (address above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).

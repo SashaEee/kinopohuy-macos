@@ -1,0 +1,109 @@
+name: Ошибка
+description: Что-то не работает или работает не так
+title: "[Ошибка] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что сообщаете! Пожалуйста, **не указывайте адрес сайта, логин, пароль и ссылки на конкретные фильмы**: репозиторий публичный. Название фильма или сериала писать можно.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Коротко опишите проблему.
+      placeholder: Например, «после перемотки плеер показывает чёрный экран, звук идёт».
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить
+      placeholder: |
+        1. Открыть сериал «…», 2 сезон
+        2. Включить 5 серию
+        3. Перемотать стрелкой вперёд
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидали увидеть
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Где
+      options:
+        - Главная и каталог
+        - Страница фильма или сериала
+        - Плеер
+        - Загрузки
+        - Поиск
+        - Вход и аккаунт
+        - Настройки и первый запуск
+        - Обновления
+        - Другое
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Версия приложения
+      description: Меню «КиноПохуй» → «О программе КиноПохуй», строка «Версия …», например «2.0.0 (100)».
+      placeholder: 2.0.0 (100)
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: Версия macOS
+      placeholder: macOS 15.5
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Процессор
+      options:
+        - Apple Silicon (M1 и новее)
+        - Intel
+    validations:
+      required: true
+
+  - type: dropdown
+    id: account
+    attributes:
+      label: Вход в аккаунт сайта
+      options:
+        - Вошёл в аккаунт
+        - Без входа
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Скриншоты, видео, отчёт о сбое
+      description: |
+        Перетащите сюда файлы. Если приложение упало, приложите отчёт: «Программы → Утилиты → Консоль → Отчёты о сбоях», файл с именем KinoPohuy. Перед отправкой закройте на скриншотах адрес сайта, а в отчёте замените имя пользователя в путях (/Users/…).
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Проверил
+      options:
+        - label: Ошибка повторяется на последней версии (меню «КиноПохуй» → «Проверить наличие обновлений…»).
+          required: true
+        - label: Похожей задачи в Issues ещё нет.
+          required: true

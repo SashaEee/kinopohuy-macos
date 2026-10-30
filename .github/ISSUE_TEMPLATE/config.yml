@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Вопрос или обсуждение
+    url: https://github.com/SashaEee/kinopohuy-macos/discussions
+    about: Как что-то сделать, впечатления, планы. Ошибки и идеи — через формы выше.
+  - name: Правообладателям
+    url: https://github.com/SashaEee/kinopohuy-macos/blob/main/SECURITY.md#правообладателям
+    about: Обращения по авторским правам — закрыто, как описано в SECURITY.md, не в Issues.
+  - name: Уязвимость
+    url: https://github.com/SashaEee/kinopohuy-macos/blob/main/SECURITY.md
+    about: О проблемах безопасности сообщайте закрыто, не в публичных Issues.

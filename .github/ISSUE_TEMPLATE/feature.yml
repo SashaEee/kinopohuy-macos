@@ -1,0 +1,48 @@
+name: Идея
+description: Предложить новую возможность или улучшение
+title: "[Идея] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Расскажите, чего не хватает. Лучше всего работают идеи, которые начинаются с задачи («хочу быстрее находить новые серии»), а не с готового решения.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую задачу это решит
+      placeholder: Например, «смотрю несколько сериалов и забываю, где остановился в каждом».
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Как вы это видите
+      description: Опишите, как это могло бы выглядеть. Можно приложить набросок или скриншот похожего приложения.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Где
+      options:
+        - Главная и каталог
+        - Страница фильма или сериала
+        - Плеер
+        - Загрузки
+        - Поиск
+        - Настройки
+        - Другое
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Как вы решаете это сейчас
+      description: Если уже нашли временное решение, расскажите какое.
+    validations:
+      required: false
