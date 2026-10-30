@@ -1,0 +1,35 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>КиноПохуй</title>
+        <item>
+            <title>2.0.0</title>
+            <pubDate>Fri, 30 Oct 2026 21:35:06 +0300</pubDate>
+            <link>https://github.com/SashaEee/kinopohuy-macos</link>
+            <sparkle:version>100</sparkle:version>
+            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## КиноПохуй 2.0.0 — первый публичный релиз
+
+Нативный тёмный клиент для macOS вместо вкладки в браузере.
+
+- **Главная** с большой заставкой, рядами постеров и «Продолжить просмотр» в один клик.
+- **Страница фильма**: озвучки, сезоны и серии прямо на странице, «Продолжить с 12:34», отметки просмотренного.
+- **Плеер**: смена озвучки и серии на лету, экран паузы с названием серии и описанием, PiP и AirPlay.
+- **Загрузки** в «Загрузки › КиноПохуй», до 10 одновременно.
+- **Новые настройки** и мастер первого запуска: адрес сайта вы указываете и проверяете сами.
+- **Автообновление**: о новой версии приложение скажет само, обновления проверяются цифровой подписью.
+- Apple Silicon и Intel, macOS 15 и новее.
+
+**Установка.** Перетащите «КиноПохуй» в «Программы». При первом запуске: Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть». Это нужно один раз.
+
+**Поддержать проект:** [Boosty](https://boosty.to/sanchella_zzz) или USDT в сети TON — адрес в README и в приложении: Настройки → «О программе» → «Поддержать проект». Спасибо!
+]]></description>
+            <enclosure url="https://github.com/SashaEee/kinopohuy-macos/releases/download/v2.0.0/KinoPohuy-2.0.0.zip" length="24693331" type="application/octet-stream" sparkle:edSignature="H4idU++xC258b7h7KwRfEwiUELXbwn4VZz2hwRAZBqK+EQsXGat5fpHWO6E86Yx7YmnVdTak6rMoYtPtMsEKCg=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: ++ELEwIbI0M2JBlLPg3d0TqcIAyxNYrOD7jN4yn5okWbErhcj+oBNljYL+wth9LykwQYeF20DGvgpzIYJKO7DQ==
+length: 3001
+-->
