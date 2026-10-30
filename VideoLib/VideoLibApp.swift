@@ -367,6 +367,25 @@ struct VideoLibApp: App {
             UpdateButton(updater: delegate.updaterController.updater)
         }
 
+        // «Выбери за меня» from anywhere (the main window comes forward if another one was in front).
+        CommandGroup(before: .sidebar) {
+            Button {
+                showPickForMe(focusText: false)
+            } label: {
+                Text(verbatim: "Выбери за меня")
+            }
+            .keyboardShortcut("j", modifiers: .command)
+
+            Button {
+                showPickForMe(focusText: true)
+            } label: {
+                Text(verbatim: "Что хочется посмотреть…")
+            }
+            .keyboardShortcut("k", modifiers: .command)
+
+            Divider()
+        }
+
         CommandGroup(replacing: .appTermination) {
             Button {
                 NSApp.terminateClosingSheets()
@@ -422,6 +441,17 @@ struct VideoLibApp: App {
                 }
             }
         }
+    }
+
+    private func showPickForMe(focusText: Bool) {
+        if Windows.videolib.window == nil {
+            openWindow(id: Windows.videolib.id)
+        }
+
+        NSApp.activate()
+        Windows.videolib.window?.makeKeyAndOrderFront(nil)
+
+        store.send(.pickForMeTapped(focusText: focusText))
     }
 
     /// Help → «Отказ от ответственности»: the text over the main window (opened first if it was closed).

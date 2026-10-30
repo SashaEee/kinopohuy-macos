@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Defaults
+import RecommenderCore
 import SQLiteData
 import SwiftUI
 
@@ -29,7 +30,22 @@ struct HomeFeature {
         /// «Похоже на «…»»: the site's «смотрите также» for the first title you're watching.
         var similar: Similar?
 
+        /// The personal rows from the recommender («Для вас», «Потому что вы досмотрели «…»», …), in its order.
+        var recRows: [RecRowModel] = []
+        /// «Сегодня вечером»: the pick for this evening, in place of the trends banner.
+        var tonight: Tonight?
+        /// The recommender knows too little yet: «Изучаем ваш вкус» instead of the personal rows.
+        var recLearning = false
+        var recStatus: RecStatus?
+
         @Presents var alert: AlertState<Action.Alert>?
+
+        /// When the rows shown were built: a newer build the same day is merged in place (a card gone after «Не моё»
+        /// is filled from the same row), so the page never reshuffles under the pointer.
+        fileprivate var recsBuiltAt: Date?
+        /// Home came into view: the next build's first cards count as shown (the recommender stops pushing what's
+        /// passed over again and again).
+        fileprivate var impressionsPending = true
 
         /// The whole continue list, watched ones too (new episodes are matched against it).
         fileprivate var watchList: [MovieWatchLater] = []
@@ -59,6 +75,22 @@ struct HomeFeature {
         var simple: MovieSimple { MovieSimple(movieId: movieId, name: name, poster: poster) }
     }
 
+    /// «Сегодня вечером»: the main pick, two «Или:», and the main one's page once it came (large poster, description).
+    struct Tonight: Equatable {
+        var main: RecItem
+        var alternatives: [RecItem]
+        /// «Будний вечер», «Поздно — на одну серию».
+        var label: String
+        var details: MovieDetailed?
+    }
+
+    /// What the banner's «…» does with its pick.
+    enum TonightFeedback {
+        case notToday
+        case notMe
+        case seen
+    }
+
     /// The «Похоже на «…»» row.
     struct Similar: Equatable {
         let name: String
@@ -80,6 +112,15 @@ struct HomeFeature {
         case updatesLoaded(Result<[SeriesUpdateGroup], any Error>)
         case newEpisodePoster(id: String, poster: String)
         case similarLoaded(source: String, name: String, Result<[MovieSimple], any Error>)
+        case recsLoaded(RecSnapshot?, merge: Bool)
+        case recsChanged
+        case recStatusLoaded(RecStatus)
+        case recOpened(String)
+        case tonightDetailsLoaded(String, MovieDetailed)
+        case tonightPromote(String)
+        case tonightFeedback(TonightFeedback)
+        case pickForMeTapped
+        case tuneTasteTapped
         case switchWatched(MovieWatchLater)
         case watchedSwitched(MovieWatchLater, Result<Bool, any Error>)
         case remove(MovieWatchLater)
@@ -93,12 +134,16 @@ struct HomeFeature {
             case push(Destinations)
             /// «Все» on «Продолжить просмотр»: the «Досмотреть» section.
             case showWatchingLater
+            /// The dice on the banner: «Выбери за меня».
+            case pickForMe
+            /// «Уточнить вкус» on the learning card: the taste stack.
+            case tuneTaste
         }
 
         enum Alert: Equatable {}
     }
 
-    private enum CancelID { case load, hero, heroTimer, continueWatching, updates, posters, similar }
+    private enum CancelID { case load, hero, heroTimer, continueWatching, updates, posters, similar, recs, recUpdates, tonight }
 
     /// How long the feed of released episodes is kept before it's asked for again.
     private static let updatesLifetime: TimeInterval = 10 * 60
@@ -118,6 +163,7 @@ struct HomeFeature {
     @Dependency(\.getSeriesUpdatesUseCase) private var getSeriesUpdatesUseCase
     @Dependency(\.switchWatchedItemUseCase) private var switchWatchedItemUseCase
     @Dependency(\.removeWatchingItemUseCase) private var removeWatchingItemUseCase
+    @Dependency(\.recommender) private var recommender
     @Dependency(\.defaultDatabase) private var database
     @Dependency(\.continuousClock) private var clock
     @Dependency(\.date.now) private var now
@@ -132,8 +178,11 @@ struct HomeFeature {
                 return .none
 
             case .onAppear:
-                // Back on Home: «Продолжить просмотр» may have moved (something was just watched).
-                guard state.categories.needsLoad else { return loadContinueWatching() }
+                state.impressionsPending = true
+
+                // Back on Home: «Продолжить просмотр» may have moved (something was just watched), and so may the
+                // recommendations.
+                guard state.categories.needsLoad else { return .merge(loadContinueWatching(), loadRecs(merge: true)) }
 
                 return .send(.reload)
 
@@ -148,7 +197,10 @@ struct HomeFeature {
                 state.updateGroups = nil
                 state.updatesLoadedAt = nil
                 state.similarSource = nil
+                state.recsBuiltAt = nil
                 if !Defaults[.isLoggedIn] {
+                    state.recRows = []
+                    state.tonight = nil
                     state.watchList = []
                     state.continueWatching = []
                     state.newEpisodes = []
@@ -161,6 +213,8 @@ struct HomeFeature {
                 return .merge(
                     load(page, isInitial: true),
                     loadContinueWatching(),
+                    loadRecs(merge: false),
+                    observeRecs(),
                     .cancel(id: CancelID.updates),
                     .cancel(id: CancelID.posters),
                     .cancel(id: CancelID.similar)
@@ -319,6 +373,67 @@ struct HomeFeature {
 
                 return .none
 
+            case let .recsLoaded(snapshot, merge):
+                return recsLoaded(&state, snapshot, merge: merge)
+
+            case .recsChanged:
+                return loadRecs(merge: true)
+
+            case let .recStatusLoaded(status):
+                state.recStatus = status
+
+                return .none
+
+            case let .recOpened(titleId):
+                return .run { _ in await recommender.markOpened(titleId) }
+
+            case let .tonightDetailsLoaded(titleId, details):
+                guard state.tonight?.main.id == titleId else { return .none }
+
+                state.tonight?.details = details
+
+                return .none
+
+            case let .tonightPromote(titleId):
+                // An «Или:» clicked: it takes the banner, the one it replaced takes its place among the «Или:».
+                guard var tonight = state.tonight, let index = tonight.alternatives.firstIndex(where: { $0.id == titleId }) else { return .none }
+
+                let alternative = tonight.alternatives[index]
+                tonight.alternatives[index] = tonight.main
+                tonight.main = alternative
+                tonight.details = nil
+                state.tonight = tonight
+
+                return loadTonightDetails(alternative)
+
+            case let .tonightFeedback(feedback):
+                guard var tonight = state.tonight else { return .none }
+
+                let id = tonight.main.id
+                let signal: Effect<Action> = switch feedback {
+                case .notToday: .run { _ in await recommender.feedback(id, .notToday) }
+                case .notMe: .run { _ in await recommender.rate(id, -2, .app) }
+                case .seen: .run { _ in await recommender.feedback(id, .seen) }
+                }
+
+                // The next «Или:» takes the banner on the spot; with none left, the trends banner comes back.
+                guard !tonight.alternatives.isEmpty else {
+                    state.tonight = nil
+                    return signal
+                }
+
+                tonight.main = tonight.alternatives.removeFirst()
+                tonight.details = nil
+                state.tonight = tonight
+
+                return .merge(signal, loadTonightDetails(tonight.main))
+
+            case .pickForMeTapped:
+                return .send(.delegate(.pickForMe))
+
+            case .tuneTasteTapped:
+                return .send(.delegate(.tuneTaste))
+
             case .seriesUpdatesTapped:
                 state.seriesUpdates = SeriesUpdatesFeature.State()
 
@@ -335,6 +450,148 @@ struct HomeFeature {
             SeriesUpdatesFeature()
         }
         .ifLet(\.$alert, action: \.alert)
+    }
+
+    // MARK: Recommendations
+
+    /// The recommender's snapshot (instant from its cache when it has one).
+    private func loadRecs(merge: Bool) -> Effect<Action> {
+        .run { send in
+            let snapshot = await recommender.home(false)
+
+            await send(.recsLoaded(snapshot, merge: merge), animation: .smooth(duration: 0.35))
+        }
+        .cancellable(id: CancelID.recs, cancelInFlight: true)
+    }
+
+    /// A new signal or a batch of the catalogue read in the background: the rows are brought up to date in place.
+    private func observeRecs() -> Effect<Action> {
+        .run { send in
+            for await _ in recommender.updates() {
+                await send(.recsChanged)
+            }
+        }
+        .cancellable(id: CancelID.recUpdates, cancelInFlight: true)
+    }
+
+    private func recsLoaded(_ state: inout State, _ snapshot: RecSnapshot?, merge: Bool) -> Effect<Action> {
+        guard let snapshot else {
+            state.recRows = []
+            state.tonight = nil
+            state.recLearning = Defaults[.isLoggedIn]
+            return state.recLearning ? loadRecStatus() : .none
+        }
+
+        let output = snapshot.output
+        let rows = Self.rowModels(snapshot)
+        let allowed = Self.allowedIds(output)
+        let sameDay = state.recsBuiltAt.map { Calendar.current.isDate($0, inSameDayAs: snapshot.builtAt) } ?? false
+
+        state.recLearning = output.isColdStart
+        state.recRows = merge && sameDay && !state.recRows.isEmpty ? Self.merged(old: state.recRows, new: rows, allowed: allowed) : rows
+        state.recsBuiltAt = snapshot.builtAt
+
+        var effects: [Effect<Action>] = []
+
+        if let hero = output.page.hero, !output.isColdStart, let main = Self.item(hero.main, snapshot) {
+            if merge, sameDay, var current = state.tonight, allowed.contains(current.main.id) {
+                // The banner keeps its pick; an «Или:» that's gone (rated, hidden) is replaced from the new build.
+                current.alternatives = current.alternatives.filter { allowed.contains($0.id) }
+                for alternative in hero.alternatives.compactMap({ Self.item($0, snapshot) })
+                    where current.alternatives.count < 2 && alternative.id != current.main.id && !current.alternatives.contains(alternative)
+                {
+                    current.alternatives.append(alternative)
+                }
+                current.label = hero.contextLabel
+                state.tonight = current
+            } else if state.tonight?.main.id != main.id {
+                state.tonight = Tonight(main: main, alternatives: hero.alternatives.compactMap { Self.item($0, snapshot) }, label: hero.contextLabel)
+                effects.append(loadTonightDetails(main))
+            }
+        } else {
+            state.tonight = nil
+        }
+
+        if state.impressionsPending {
+            state.impressionsPending = false
+            var shown: [String] = []
+            if let tonight = state.tonight { shown += [tonight.main.id] + tonight.alternatives.map(\.id) }
+            for row in state.recRows { shown += row.items.prefix(6).map(\.id) }
+            if !shown.isEmpty {
+                effects.append(.run { [shown] _ in await recommender.recordImpressions(shown, "home") })
+            }
+        }
+
+        if output.isColdStart { effects.append(loadRecStatus()) }
+
+        return .merge(effects)
+    }
+
+    private func loadRecStatus() -> Effect<Action> {
+        .run { send in
+            await send(.recStatusLoaded(await recommender.status()))
+        }
+    }
+
+    /// The banner's large poster and description: from the main pick's page (one request, as the trends banner does).
+    private func loadTonightDetails(_ item: RecItem) -> Effect<Action> {
+        .run { send in
+            guard let details = try? await getMovieDetailsUseCase(movieId: item.title.path) else { return }
+
+            await send(.tonightDetailsLoaded(item.id, details), animation: .easeInOut(duration: 0.4))
+        }
+        .cancellable(id: CancelID.tonight, cancelInFlight: true)
+    }
+
+    private static func item(_ recommendation: Recommendation, _ snapshot: RecSnapshot) -> RecItem? {
+        snapshot.titles[recommendation.titleId].map { RecItem(rec: recommendation, title: $0) }
+    }
+
+    /// The engine's rows with their titles (a title the snapshot has no data for is left out).
+    static func rowModels(_ snapshot: RecSnapshot) -> [RecRowModel] {
+        snapshot.output.page.rows.compactMap { row in
+            let items = row.items.compactMap { item($0, snapshot) }
+            return items.isEmpty ? nil : RecRowModel(id: row.id, kind: row.kind, title: row.title, items: items)
+        }
+    }
+
+    /// Every title the build still recommends somewhere.
+    static func allowedIds(_ output: EngineOutput) -> Set<String> {
+        var ids = Set(output.ranked.map(\.titleId))
+        for row in output.page.rows { ids.formUnion(row.items.map(\.titleId)) }
+        if let hero = output.page.hero { ids.formUnion([hero.main.titleId] + hero.alternatives.map(\.titleId)) }
+        return ids
+    }
+
+    /// A newer build merged into the rows on screen: each row keeps its place and its cards' order, a card no longer
+    /// recommended goes and the row is topped up from its new version; rows that appeared go at the end. A row left
+    /// with fewer than four cards goes.
+    static func merged(old: [RecRowModel], new: [RecRowModel], allowed: Set<String>) -> [RecRowModel] {
+        let fresh = Dictionary(new.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var kept = old.map { row in row.items.filter { allowed.contains($0.id) } }
+        var used = Set(kept.flatMap { $0.map(\.id) })
+
+        var rows: [RecRowModel] = []
+        for (index, row) in old.enumerated() {
+            var items = kept[index]
+            if let update = fresh[row.id] {
+                for item in update.items where items.count < row.items.count && !used.contains(item.id) {
+                    items.append(item)
+                    used.insert(item.id)
+                }
+            }
+            kept[index] = items
+            if items.count >= 4 {
+                rows.append(RecRowModel(id: row.id, kind: row.kind, title: row.title, items: items))
+            }
+        }
+        for row in new where !old.contains(where: { $0.id == row.id }) {
+            let items = row.items.filter { !used.contains($0.id) }
+            guard items.count >= 8 else { continue }
+            rows.append(RecRowModel(id: row.id, kind: row.kind, title: row.title, items: items))
+            used.formUnion(items.map(\.id))
+        }
+        return rows
     }
 
     /// «Продолжить просмотр» and «Новые серии» from the continue list and the feed as they are now.

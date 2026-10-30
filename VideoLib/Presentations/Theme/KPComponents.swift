@@ -276,6 +276,8 @@ struct KPHero<Art: View, Actions: View>: View {
     var ratings: [(source: String, value: String)] = []
     var description: String?
     var descriptionLines = 3
+    /// Why it's shown («Потому что вы досмотрели «Мост»»), a line in the sun's colour under the name.
+    var reason: String?
     /// A title's page: the taller banner of the two (`height` overrides both).
     var details = false
     var height: CGFloat?
@@ -379,6 +381,16 @@ struct KPHero<Art: View, Actions: View>: View {
                             }
                         }
                     }
+                }
+                if let reason, !reason.isEmpty {
+                    Label {
+                        Text(verbatim: reason)
+                    } icon: {
+                        Image(systemName: "sparkles")
+                    }
+                    .font(KP.font(metrics.facts + 0.5, .semibold))
+                    .foregroundStyle(KP.sun)
+                    .lineLimit(1)
                 }
                 // Each late slot is a ZStack: the stand-in and the real line overlap while they cross-fade, instead
                 // of stacking up for a moment and pushing the title.

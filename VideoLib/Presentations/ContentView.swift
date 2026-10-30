@@ -115,6 +115,14 @@ struct ContentView: View {
         }
 
         Button {
+            store.send(.pickForMeTapped(focusText: false))
+        } label: {
+            Image(systemName: "dice")
+        }
+        .buttonStyle(KPIconButtonStyle(diameter: 28, filled: false))
+        .help("Выбери за меня (⌘J)")
+
+        Button {
             store.send(.home(.seriesUpdatesTapped))
         } label: {
             Image(systemName: "bell")
@@ -183,6 +191,9 @@ struct ContentView: View {
         }
         .sheet(item: $store.scope(state: \.home.seriesUpdates, action: \.home.seriesUpdates)) { store in
             SeriesUpdatesSheetView(store: store)
+        }
+        .sheet(item: $store.scope(state: \.pickForMe, action: \.pickForMe)) { store in
+            PickForMeView(store: store)
         }
         .sheet(isPresented: $store.isCommentsRulesPresented) {
             CommentsRulesSheetView()

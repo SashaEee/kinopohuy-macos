@@ -40,6 +40,8 @@ struct AppFeature {
 
         @Presents var destination: Destination.State?
         @Presents var alert: AlertState<Action.Alert>?
+        /// «Выбери за меня» (⌘J, ⌘K), over whatever is open.
+        @Presents var pickForMe: PickForMeFeature.State?
     }
 
     enum Action: BindableAction {
@@ -64,6 +66,9 @@ struct AppFeature {
         case loggedInChanged(Bool)
         case destination(PresentationAction<Destination.Action>)
         case alert(PresentationAction<Alert>)
+        /// ⌘J, the dice: «Выбери за меня»; ⌘K: the same with the cursor in its field.
+        case pickForMeTapped(focusText: Bool)
+        case pickForMe(PresentationAction<PickForMeFeature.Action>)
 
         enum Alert: Equatable {}
     }
@@ -98,6 +103,32 @@ struct AppFeature {
 
             case let .home(.delegate(.push(route))):
                 state.pendingRoute = PendingRoute(route: route)
+
+                return .none
+
+            case .home(.delegate(.pickForMe)):
+                return .send(.pickForMeTapped(focusText: false))
+
+            case let .pickForMeTapped(focusText):
+                if state.pickForMe != nil {
+                    // ⌘K while it's open: only the cursor moves to the field.
+                    if focusText { state.pickForMe?.focusRequests += 1 }
+                    return .none
+                }
+
+                state.pickForMe = PickForMeFeature.State(focusText: focusText)
+
+                return .none
+
+            case let .pickForMe(.presented(.delegate(.watch(movie)))):
+                state.pickForMe = nil
+                state.pendingRoute = PendingRoute(route: .watch(movie))
+
+                return .none
+
+            case let .pickForMe(.presented(.delegate(.open(movie)))):
+                state.pickForMe = nil
+                state.pendingRoute = PendingRoute(route: .details(movie))
 
                 return .none
 
@@ -232,13 +263,16 @@ struct AppFeature {
 
                 return .none
 
-            case .binding, .path, .home, .search, .categories, .collections, .watchingLater, .bookmarks, .destination, .alert:
+            case .binding, .path, .home, .search, .categories, .collections, .watchingLater, .bookmarks, .destination, .alert, .pickForMe:
                 return .none
             }
         }
         .forEach(\.path, action: \.path)
         .ifLet(\.$destination, action: \.destination)
         .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$pickForMe, action: \.pickForMe) {
+            PickForMeFeature()
+        }
     }
 }
 

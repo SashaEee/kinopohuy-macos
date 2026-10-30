@@ -1,16 +1,24 @@
 import ComposableArchitecture
+import Defaults
 import Kingfisher
+import RecommenderCore
 import SwiftUI
 
-/// The banner (a few of the first row's titles taking turns) under the top bar; when signed in «Продолжить просмотр»
-/// (a click goes on watching), «Новые серии» and «Похоже на «…»»; then the site's rows, each scrolling sideways, more
-/// loading as the last one comes into view.
+/// «Сегодня вечером» (the recommender's pick for now, with two «Или:») or the trends banner under the top bar; when
+/// signed in «Продолжить просмотр» (a click goes on watching) and «Новые серии»; then the personal rows («Для вас»,
+/// «Потому что вы досмотрели «…»», …); then the site's rows, each scrolling sideways, more loading as the last one comes
+/// into view.
 struct HomeView: View {
     @Bindable var store: StoreOf<HomeFeature>
 
     @Environment(\.kpMetrics) private var metrics
     @Environment(\.appearsActive) private var appearsActive
     @State private var heroOnScreen = true
+    @State private var whyPresented = false
+    @Default(.recHeroMode) private var heroMode
+
+    /// The banner is the recommender's pick, not the trends.
+    private var showsTonight: Bool { heroMode == HeroMode.tonight.rawValue && store.tonight != nil }
 
     /// The banner's picture decoded at about its drawn size (see `hero`).
     static let heroPixels = CGSize(width: 1400, height: 2100)
@@ -20,7 +28,7 @@ struct HomeView: View {
             // A plain stack: Home has a handful of rows, built once, rather than each one (a scroll view with its cards)
             // being made the moment it scrolls into view, mid-gesture. Each row stays lazy sideways.
             VStack(alignment: .leading, spacing: metrics.sectionGap) {
-                hero
+                banner
                     .onScrollVisibilityChange(threshold: 0.2) { heroOnScreen = $0 }
 
                 if !store.continueWatching.isEmpty {
@@ -48,7 +56,27 @@ struct HomeView: View {
                     .transition(.opacity)
                 }
 
-                if let similar = store.similar {
+                if store.recLearning {
+                    RecLearningCard(status: store.recStatus) {
+                        store.send(.tuneTasteTapped)
+                    }
+                    .transition(.opacity)
+                }
+
+                ForEach(store.recRows) { row in
+                    KPRow(title: row.title, items: row.items, seeAll: row.kind == .forYou && row.items.count > 8 ? {
+                        store.send(.delegate(.push(.customList(row.items.map(\.title.simple), row.title))))
+                    } : nil) { item in
+                        RecCardView(item: item) {
+                            store.send(.recOpened(item.id))
+                        }
+                        .equatable()
+                    }
+                    .transition(.opacity)
+                }
+
+                // The site's «смотрите также» for what's being watched, until the personal rows are there.
+                if store.recRows.isEmpty, let similar = store.similar {
                     KPRow(title: "Похоже на «\(Self.short(similar.name))»", items: similar.movies) { movie in
                         CardView(movie: movie)
                             .equatable()
@@ -97,7 +125,7 @@ struct HomeView: View {
         .scrollIndicators(.automatic)
         .kpReportsScrolling()
         // The banner turns only while it's on screen and the window is in front.
-        .onChange(of: heroOnScreen && appearsActive, initial: true) { _, visible in
+        .onChange(of: heroOnScreen && appearsActive && !showsTonight, initial: true) { _, visible in
             store.send(.heroVisible(visible))
         }
         .ignoresSafeArea(edges: .top)
@@ -126,6 +154,100 @@ struct HomeView: View {
     /// A long name cut, so the row's heading stays on one line.
     private static func short(_ name: String) -> String {
         name.count > 40 ? name.prefix(38).trimmingCharacters(in: .whitespaces) + "…" : name
+    }
+
+    /// What's under the top bar: «Сегодня вечером», the trends, or nothing (Settings → «Рекомендации»).
+    @ViewBuilder
+    private var banner: some View {
+        if heroMode == HeroMode.hidden.rawValue {
+            Color.clear.frame(height: KP.topBarHeight)
+        } else if showsTonight, let tonight = store.tonight {
+            tonightHero(tonight)
+        } else {
+            hero
+        }
+    }
+
+    /// «Сегодня вечером»: the pick for now, lower than the trends banner so «Продолжить просмотр» shows without scrolling
+    /// on a 13" screen. The «…» has «Не сегодня», «Не моё», «Уже смотрел» (the next «Или:» takes its place) and «Почему
+    /// это?»; the dice opens «Выбери за меня».
+    private func tonightHero(_ tonight: HomeFeature.Tonight) -> some View {
+        let title = tonight.main.title
+        let details = tonight.details
+        let simple = title.simple
+
+        return KPHero(
+            kicker: tonight.label.isEmpty ? "Сегодня вечером" : "Сегодня вечером · \(tonight.label)",
+            title: details?.nameRussian ?? title.name,
+            original: details?.nameOriginal ?? title.originalName,
+            facts: details?.heroFacts ?? title.recFacts,
+            ratings: details?.heroRatings ?? title.recRatings,
+            description: details?.description ?? title.synopsis,
+            descriptionLines: 2,
+            reason: tonight.main.rec.reason.long,
+            height: (metrics.compact ? 360 : 400) + KP.topBarHeight
+        ) {
+            KPRemoteImage(url: details?.hposter ?? title.poster, fallback: title.poster, downsample: Self.heroPixels, fallbackDownsample: KP.cardPosterPixels())
+        } actions: {
+            Button {
+                store.send(.recOpened(tonight.main.id))
+                store.send(.delegate(.push(.watch(simple))))
+            } label: {
+                Label("Смотреть", systemImage: "play.fill")
+            }
+            .buttonStyle(KPPrimaryButtonStyle())
+
+            Button {
+                store.send(.recOpened(tonight.main.id))
+                store.send(.delegate(.push(.details(simple))))
+            } label: {
+                Label("Подробнее", systemImage: "info.circle")
+            }
+            .buttonStyle(KPSecondaryButtonStyle())
+
+            Button {
+                store.send(.pickForMeTapped)
+            } label: {
+                Image(systemName: "dice")
+            }
+            .buttonStyle(KPIconButtonStyle())
+            .help("Выбери за меня (⌘J)")
+
+            Menu {
+                Button("Почему это?") { whyPresented = true }
+                Divider()
+                Button("Не сегодня") { store.send(.tonightFeedback(.notToday), animation: .smooth(duration: 0.4)) }
+                Button("Не моё") { store.send(.tonightFeedback(.notMe), animation: .smooth(duration: 0.4)) }
+                Button("Уже смотрел") { store.send(.tonightFeedback(.seen), animation: .smooth(duration: 0.4)) }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: metrics.control * 0.36, weight: .bold))
+                    .foregroundStyle(KP.fg80)
+                    .frame(width: metrics.control, height: metrics.control)
+                    .background(Circle().fill(KP.chip))
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Почему это, не сегодня, не моё")
+            .popover(isPresented: $whyPresented, arrowEdge: .bottom) {
+                WhyThisView(titleId: tonight.main.id, name: title.name) {
+                    whyPresented = false
+                }
+            }
+        }
+        .id(tonight.main.id)
+        .transition(.opacity)
+        .overlay(alignment: .bottomTrailing) {
+            if !tonight.alternatives.isEmpty {
+                TonightAlternatives(items: tonight.alternatives) { id in
+                    store.send(.tonightPromote(id), animation: .easeInOut(duration: 0.5))
+                }
+                .padding(.trailing, KP.gutter)
+                .padding(.bottom, metrics.heroBottom)
+            }
+        }
     }
 
     @ViewBuilder
@@ -257,6 +379,64 @@ private struct HeroDots: View {
             guard !Task.isCancelled else { return }
             withAnimation(.linear(duration: 9.97)) { progress = 1 }
         }
+    }
+}
+
+/// «Или:» on the «Сегодня вечером» banner: two small posters with their reason; a click puts one in the banner.
+private struct TonightAlternatives: View {
+    let items: [RecItem]
+    let promote: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: "ИЛИ")
+                .font(KP.font(11, .bold))
+                .tracking(1.4)
+                .foregroundStyle(KP.fg55)
+            HStack(spacing: 12) {
+                ForEach(items.prefix(2)) { item in
+                    TonightAlternative(item: item) { promote(item.id) }
+                }
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(KP.bg.opacity(0.35), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .environment(\.colorScheme, .dark)
+    }
+}
+
+private struct TonightAlternative: View {
+    let item: RecItem
+    let action: () -> Void
+
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                KPRemoteImage(url: item.title.poster, downsample: KP.cardPosterPixels())
+                    .frame(width: 56, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(KP.fg, lineWidth: 2).padding(-3).opacity(hover ? 1 : 0))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: item.title.name)
+                        .font(KP.font(13, .semibold))
+                        .foregroundStyle(KP.fg)
+                        .lineLimit(2)
+                    Text(verbatim: item.rec.reason.short.isEmpty ? (item.title.cardSubtitle ?? "") : item.rec.reason.short)
+                        .font(KP.font(11.5, .medium))
+                        .foregroundStyle(KP.fg55)
+                        .lineLimit(2)
+                }
+                .frame(width: 128, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.15), value: hover)
+        .help(item.rec.reason.long.isEmpty ? "Поставить в баннер" : item.rec.reason.long)
     }
 }
 
