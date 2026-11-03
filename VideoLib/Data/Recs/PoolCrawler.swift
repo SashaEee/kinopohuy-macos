@@ -5,7 +5,7 @@ import RecommenderCore
 /// Once a week, a few dozen list pages (never title pages) widen the pool the recommender picks from: the site's best
 /// lists for each kind in the user's top genres, the newest, the hot slider and «смотрят сейчас», the lists and
 /// collections the user's titles are in, and the filmographies of their favourite people. Every page goes through
-/// the background queue (one at a time, 1.5 s apart, within the daily limit), and its cards are stored with the
+/// the background queue (one at a time, 3 s apart, within the daily limit), and its cards are stored with the
 /// board they came from, so a list's places and a collection's members become edges of the graph.
 struct PoolCrawler: Sendable {
     let titles: TitleStore

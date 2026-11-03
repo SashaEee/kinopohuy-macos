@@ -108,7 +108,7 @@ private final class BackgroundInterceptor: RequestInterceptor, Sendable {
     }
 }
 
-/// The one line to the site for everything in the background: one request at a time, at least 1.5 s apart (a little
+/// The one line to the site for everything in the background: one request at a time, at least 3 s apart (a little
 /// more, at random, like a person), nothing while a player window is open, a daily limit
 /// (`Defaults[.recCrawlDailyLimit]`, counted per local day and kept across launches), and waits that grow after
 /// refusals: 403, 429 or a blocked address double the wait each time; two 403 in a row pause it for 30 minutes.
@@ -116,7 +116,7 @@ actor SiteQueue {
     private let site = BackgroundSite()
     private let store: SignalStore
 
-    static let spacing: TimeInterval = 1.5
+    static let spacing: TimeInterval = 3
     static let jitter: ClosedRange<Double> = 0 ... 1.2
     static let longPause: TimeInterval = 30 * 60
     static let networkPause: TimeInterval = 2 * 60
