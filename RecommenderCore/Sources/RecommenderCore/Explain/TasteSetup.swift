@@ -1,7 +1,7 @@
 import Foundation
 
-/// What «Уточнить вкус» needs from the engine: the bubbles of «Что вам близко», the next titles to rate after a liked
-/// one (as Spotify offers related artists), and how well the taste is known so far.
+/// What «Уточнить вкус» needs from the engine: the bubbles of «Что вам близко», the grid of «Что хочется посмотреть?»,
+/// and how well the taste is known so far.
 extension PreparedEngine {
     /// «Что вам близко»: what the data says the user likes (pre-selected, strongest first), what they clearly don't
     /// (negative affinity), then the pool's most common genres and countries to choose from. Never the site's sections
@@ -30,35 +30,6 @@ extension PreparedEngine {
         return bubbles
     }
 
-    /// After «Нравится» or «Обожаю» on a title: well-known titles next to it on the site (watch-also, its franchise and
-    /// collections) the user is likely to have seen too and hasn't rated, most voted first. The deck slips them in, so
-    /// each answer steers the next questions.
-    public func rateNext(after titleId: String, excluding: Set<String>, limit: Int = 3) -> [String] {
-        guard let title = core.titleIndex[titleId] else { return [] }
-        let graph = core.graph
-        var near = Set(graph.watchAlso[title])
-        for board in graph.titleBoards[title] {
-            let kind = graph.board(board).kind
-            guard kind == .franchise || kind == .collection else { continue }
-            near.formUnion(graph.boardMembers[board].prefix(60))
-        }
-        near.remove(title)
-
-        func votes(_ index: Int) -> Int {
-            let t = core.titles[index]
-            return [t.kpVotes, t.imdbVotes, t.siteVotes].compactMap(\.self).max() ?? 0
-        }
-        return near
-            .filter { index in
-                let t = core.titles[index]
-                return !excluding.contains(t.id) && t.poster != nil && !t.comingSoon
-                    && core.signal(index).map { $0.weight == 0 && $0.explicitLevel == nil } ?? true
-            }
-            .sorted { votes($0) != votes($1) ? votes($0) > votes($1) : core.titles[$0].id < core.titles[$1].id }
-            .prefix(limit)
-            .map { core.titles[$0].id }
-    }
-
     /// How well the taste is known, 0…1, for «Вкус изучен на 60 %»: what was watched gets it a third of the way (it says
     /// what you play, not what you thought of it); the user's own ratings carry it the rest.
     public func tasteConfidence() -> Double {
@@ -66,5 +37,29 @@ extension PreparedEngine {
         let rated = Set(input.signals.ratings.map(\.titleId)).count
         let explicit = min(1, Double(rated) / 20)
         return min(1, 0.35 * watched + 0.65 * explicit)
+    }
+
+    /// «Что хочется посмотреть?»: well-known titles the engine would recommend that the user hasn't seen or lined up,
+    /// varied (no two alike), for a grid to tick. Ticking is interest, not a rating.
+    public func interestGrid(count: Int = 12) -> [String] {
+        func votes(_ index: Int) -> Int {
+            let t = core.titles[index]
+            return [t.kpVotes, t.imdbVotes, t.siteVotes].compactMap(\.self).max() ?? 0
+        }
+        let candidates = output.ranked.compactMap { core.titleIndex[$0.titleId] }.filter { index in
+            core.titles[index].poster != nil && core.signal(index) == nil
+        }
+        // Known ones first (people recognise them from a poster), the rest after, each list in the engine's order.
+        let known = candidates.filter { votes($0) >= 1000 }
+        let rest = candidates.filter { votes($0) < 1000 }
+        var chosen: [Int] = []
+        for strictness in [0.55, 0.75, 1.01] {
+            for index in known + rest where chosen.count < count && !chosen.contains(index) {
+                // Varied: nothing too close to what's already in the grid (looser if the grid can't fill).
+                if chosen.contains(where: { similarity.similarity($0, index) > strictness }) { continue }
+                chosen.append(index)
+            }
+        }
+        return chosen.map { core.titles[$0].id }
     }
 }

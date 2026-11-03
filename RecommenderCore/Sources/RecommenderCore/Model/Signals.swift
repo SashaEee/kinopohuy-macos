@@ -138,6 +138,8 @@ public enum FeedbackKind: String, Codable, Sendable, Hashable, CaseIterable {
     case continueHidden
     /// «Бросил»: a weak minus.
     case dropped
+    /// «Хочу посмотреть» in «Уточнить вкус»: an intent, and a little taste (not a rating: it wasn't seen).
+    case interested
 }
 
 public struct Feedback: Codable, Sendable, Hashable {

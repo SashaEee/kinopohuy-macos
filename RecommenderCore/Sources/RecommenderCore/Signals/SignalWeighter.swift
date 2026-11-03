@@ -226,6 +226,10 @@ enum SignalWeighter {
                 components.append((weights.followed, nil))
             }
             if let at = droppedAt[id] { components.append((weights.dropped, at)) }
+            if kinds.contains(.interested) {
+                signal.intent = max(signal.intent, weights.bookmarkIntent)
+                components.append((weights.bookmarkIntent * weights.bookmarkTasteFactor, nil))
+            }
 
             // «Это смотрел не я»: every implicit signal of the title goes, and so does what it said about watching.
             var implicitWeight: Double = 0

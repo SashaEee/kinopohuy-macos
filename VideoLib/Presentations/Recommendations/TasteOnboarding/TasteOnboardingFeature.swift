@@ -4,9 +4,9 @@ import Foundation
 import RecommenderCore
 
 /// «Уточнить вкус за минуту»: «Что вам близко?» as bubbles (what the data says is pre-selected; a click adds or
-/// removes, a right click is «Не моё»), then a deck of your own titles to rate with one key each that grows as you
-/// go (a liked title brings in well-known ones next to it, as Spotify offers related artists), with «Вкус изучен на
-/// N %» and what Home would recommend right now updating after every answer; then what never to show. Every answer
+/// removes, a right click is «Не моё»), then a deck of your own titles — only what was played — to rate with one key
+/// each, with «Вкус изучен на N %» and what Home would recommend right now updating after every answer; then «Что
+/// хочется посмотреть?», a grid of unseen titles to tick (interest, not a rating); then what never to show. Every answer
 /// counts the moment it's given, so leaving halfway keeps what was said; «Пропустить» is on every step. Offered once
 /// (`shouldOffer`), and from Settings.
 @Reducer
@@ -14,6 +14,8 @@ struct TasteOnboardingFeature {
     enum Step: Int, CaseIterable, Equatable, Sendable {
         case intro
         case stack
+        /// «Что хочется посмотреть?»: unseen titles to tick.
+        case interest
         case exclusions
         case done
     }
@@ -42,6 +44,9 @@ struct TasteOnboardingFeature {
         var confidence: Double = 0
         /// «Сейчас мы бы посоветовали»: the first of «Для вас» as things stand, after each answer.
         var preview: [TitleFeatures] = []
+        /// «Что хочется посмотреть?» and what's ticked.
+        var interest: [TitleFeatures] = []
+        var interested: Set<String> = []
         /// Done or skipped: the view closes.
         var isFinished = false
 
@@ -101,8 +106,8 @@ struct TasteOnboardingFeature {
         case bubbleTapped(FeatureKey)
         /// Right click → «Не моё» (again: back to neutral).
         case bubbleNotForMe(FeatureKey)
-        /// A liked title brought in titles next to it: they go right after it.
-        case deckGrew([TitleFeatures])
+        case interestLoaded([TitleFeatures])
+        case interestToggled(String)
         case progress(confidence: Double, preview: [TitleFeatures])
         /// «Уточнить за минуту».
         case startTapped
@@ -151,6 +156,7 @@ struct TasteOnboardingFeature {
                         animation: .smooth(duration: 0.35)
                     )
                     await send(.progress(confidence: await recommender.tasteConfidence(), preview: Self.preview(home)))
+                    await send(.interestLoaded(await recommender.interestGrid()))
                 }
                 .cancellable(id: CancelID.load, cancelInFlight: true)
 
@@ -186,17 +192,29 @@ struct TasteOnboardingFeature {
 
                 return .merge(setBubble(bubble, to: next), refreshProgress())
 
-            case let .deckGrew(titles):
-                // Right after the card answered, without repeats, within the deck's limit.
-                let known = Set(state.stack.map(\.id))
-                let room = max(0, TasteOnboardingRules.deckLimit - state.stack.count)
-                let fresh = Array(titles.filter { !known.contains($0.id) }.prefix(room))
-                guard !fresh.isEmpty else { return .none }
-
-                state.stack.insert(contentsOf: fresh, at: min(state.index, state.stack.count))
-                if state.step == .exclusions, state.answers.count == state.index { state.go(.stack) }
+            case let .interestLoaded(titles):
+                state.interest = titles
+                #if DEBUG
+                    // KP_TASTE=interest: straight to the grid (to look at it).
+                    if ProcessInfo.processInfo.environment["KP_TASTE"] == "interest", !titles.isEmpty { state.go(.interest) }
+                #endif
 
                 return .none
+
+            case let .interestToggled(titleId):
+                let picked = !state.interested.contains(titleId)
+                if picked { state.interested.insert(titleId) } else { state.interested.remove(titleId) }
+
+                return .merge(
+                    .run { _ in
+                        if picked {
+                            await recommender.feedback(titleId, .interested)
+                        } else {
+                            await recommender.removeFeedback(titleId, .interested)
+                        }
+                    },
+                    refreshProgress()
+                )
 
             case let .progress(confidence, preview):
                 state.confidence = confidence
@@ -205,7 +223,7 @@ struct TasteOnboardingFeature {
                 return .none
 
             case .startTapped:
-                state.go(state.stack.isEmpty ? .exclusions : .stack)
+                state.go(!state.stack.isEmpty ? .stack : state.interest.isEmpty ? .exclusions : .interest)
 
                 return .none
 
@@ -220,19 +238,13 @@ struct TasteOnboardingFeature {
                 state.answers.append(State.Answer(titleId: title.id, choice: choice))
                 state.index += 1
                 if state.index >= state.stack.count {
-                    state.go(.exclusions)
+                    state.go(state.interest.isEmpty ? .exclusions : .interest)
                 }
 
                 guard let level = choice.tasteLevel else { return .none }
 
-                let asked = Set(state.stack.map(\.id))
                 return .run { send in
                     await recommender.rate(title.id, level.level, .onboarding)
-                    // Liked: the well-known titles next to it come next (the user has likely seen them too).
-                    if level != .notForMe {
-                        let next = await recommender.rateNext(title.id, asked)
-                        if !next.isEmpty { await send(.deckGrew(next), animation: .smooth(duration: 0.3)) }
-                    }
                     await send(.progress(confidence: await recommender.tasteConfidence(), preview: Self.preview(await recommender.home(false))), animation: .smooth(duration: 0.45))
                 }
                 .cancellable(id: CancelID.progress, cancelInFlight: true)
@@ -260,6 +272,8 @@ struct TasteOnboardingFeature {
                 case .intro:
                     state.isFinished = true
                 case .stack:
+                    state.go(state.interest.isEmpty ? .exclusions : .interest)
+                case .interest:
                     state.go(.exclusions)
                 case .exclusions:
                     state.go(.done)

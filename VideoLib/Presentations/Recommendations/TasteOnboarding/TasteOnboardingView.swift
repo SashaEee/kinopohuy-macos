@@ -34,6 +34,8 @@ struct TasteOnboardingView: View {
                         intro.transition(stepTransition)
                     case .stack:
                         stack.transition(stepTransition)
+                    case .interest:
+                        interest.transition(stepTransition)
                     case .exclusions:
                         exclusions.transition(stepTransition)
                     case .done:
@@ -92,7 +94,7 @@ struct TasteOnboardingView: View {
     /// The steps as dots; «Назад» on the stack; «Пропустить» (or «Закрыть» at the end) on the right.
     private var header: some View {
         ZStack {
-            StepDots(count: 3, current: min(store.step.rawValue, 2), finished: store.step == .done)
+            StepDots(count: 4, current: min(store.step.rawValue, 3), finished: store.step == .done)
 
             HStack {
                 if store.step == .stack, !store.answers.isEmpty {
@@ -409,7 +411,46 @@ struct TasteOnboardingView: View {
         }
     }
 
-    // MARK: - 3. What not to show
+    // MARK: - 3. What you'd like to watch
+
+    /// «Что хочется посмотреть?»: twelve well-known titles you haven't seen, in two rows; a click ticks one. Not a
+    /// rating: it only tells the recommendations where to look.
+    private var interest: some View {
+        VStack(spacing: 0) {
+            Text(verbatim: "Что хочется посмотреть?")
+                .font(KP.font(26, .heavy))
+                .tracking(-0.5)
+                .foregroundStyle(KP.fg)
+                .padding(.top, 8)
+            Text(verbatim: "Это не оценка — вы их не смотрели. Отметьте, что интересно, и советы пойдут в ту сторону.")
+                .font(KP.font(14, .medium))
+                .foregroundStyle(KP.fg55)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 480)
+                .padding(.top, 8)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(92), spacing: 12), count: 6), spacing: 14) {
+                ForEach(store.interest) { title in
+                    InterestPoster(title: title, picked: store.interested.contains(title.id)) {
+                        store.send(.interestToggled(title.id), animation: .spring(response: 0.3, dampingFraction: 0.7))
+                    }
+                }
+            }
+            .padding(.top, 22)
+
+            Spacer(minLength: 16)
+
+            Button {
+                store.send(.skipStepTapped, animation: .spring(response: 0.42, dampingFraction: 0.88))
+            } label: {
+                Text(verbatim: store.interested.isEmpty ? "Дальше" : "Дальше · отмечено \(store.interested.count)")
+            }
+            .buttonStyle(KPSheetButtonStyle(primary: true, width: 260))
+            .keyboardShortcut(.defaultAction)
+        }
+    }
+
+    // MARK: - 4. What not to show
 
     private var exclusions: some View {
         VStack(spacing: 0) {
@@ -619,6 +660,53 @@ private struct TasteBubble: View {
             Button(bubble.state == .notForMe ? "Вернуть" : "Не моё", action: notForMe)
         }
         .help(bubble.state == .notForMe ? "Не моё — правый клик, чтобы вернуть" : "Нажмите, чтобы \(bubble.state == .liked ? "убрать" : "добавить"); правый клик — «Не моё»")
+    }
+}
+
+/// A poster in «Что хочется посмотреть?»: ticked, it gets a white ring and a check; its name under it.
+private struct InterestPoster: View {
+    let title: TitleFeatures
+    let picked: Bool
+    let toggle: () -> Void
+
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: toggle) {
+            VStack(alignment: .leading, spacing: 6) {
+                KPRemoteImage(url: title.poster, downsample: CGSize(width: 184, height: 276))
+                    .frame(width: 92, height: 138)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .strokeBorder(KP.fg, lineWidth: 2.5)
+                            .padding(-4)
+                            .opacity(picked ? 1 : 0)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if picked {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(KP.ink, KP.fg)
+                                .padding(5)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .opacity(picked || hover ? 1 : 0.82)
+                    .scaleEffect(hover ? 1.04 : 1)
+                Text(verbatim: title.name)
+                    .font(KP.font(11.5, .semibold))
+                    .foregroundStyle(picked ? KP.fg : KP.fg55)
+                    .lineLimit(2)
+                    .frame(width: 92, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .animation(.snappy(duration: 0.15), value: hover)
+        .help(title.name)
     }
 }
 

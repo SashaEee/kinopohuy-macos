@@ -137,16 +137,15 @@ struct TasteSetupTests {
         #expect(!bubbles.contains { $0.name.lowercased() == "зарубежные" })
     }
 
-    @Test func rateNextOffersUnratedNeighboursOnly() {
+    @Test func interestGridIsUnseenAndVaried() {
         let input = EngineEndToEndTests.input
         let engine = Recommender.prepare(input)
-        let rated = Set(input.signals.ratings.map(\.titleId))
-        guard let liked = input.titles.first(where: { !$0.watchAlso.isEmpty })?.id else { return }
-        let next = engine.rateNext(after: liked, excluding: [liked], limit: 3)
-        #expect(next.count <= 3)
-        #expect(!next.contains(liked))
-        #expect(next.allSatisfy { !rated.contains($0) })
-        #expect(next == engine.rateNext(after: liked, excluding: [liked], limit: 3))
+        let grid = engine.interestGrid(count: 12)
+        let touched = Set(input.signals.sessions.map(\.titleId) + input.signals.accountList.map(\.titleId) + input.signals.ratings.map(\.titleId))
+        #expect(grid.count <= 12)
+        #expect(Set(grid).count == grid.count)
+        #expect(grid.allSatisfy { !touched.contains($0) })
+        #expect(grid == engine.interestGrid(count: 12))
     }
 
     /// Most accounts play from «Досмотреть» on the TV or the site and mark nothing: those titles still make a deck.

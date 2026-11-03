@@ -225,7 +225,7 @@ extension RecommenderClient {
         },
         overrides: { await RecRuntime.shared.signals.overrides() },
         tasteBubbles: { await RecRuntime.shared.engine.tasteBubbles() },
-        rateNext: { titleId, excluding in await RecRuntime.shared.engine.rateNext(after: titleId, excluding: excluding) },
+        interestGrid: { await RecRuntime.shared.engine.interestGrid() },
         tasteConfidence: { await RecRuntime.shared.engine.tasteConfidence() },
         recordImpressions: { titleIds, surface in await RecRuntime.shared.signals.recordImpressions(titleIds, surface: surface) },
         markOpened: { titleId in await RecRuntime.shared.signals.markOpened(titleId) },

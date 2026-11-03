@@ -319,8 +319,6 @@ enum TasteOnboardingRules {
     /// Fewer than this many of your own titles and there's nothing worth asking about yet.
     static let minimumOwnTitles = 5
     static let stackLimit = 12
-    /// The deck grows with titles next to liked ones, up to this many cards in all.
-    static let deckLimit = 30
     /// «Что вам близко?» starts with this many bubbles chosen from the data.
     static let preselectedBubbles = 6
 

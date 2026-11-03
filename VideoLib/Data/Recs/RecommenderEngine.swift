@@ -126,10 +126,10 @@ actor RecommenderEngine {
         await ensurePrepared()?.tasteBubbles() ?? []
     }
 
-    /// After a liked title in «Уточнить вкус»: well-known neighbours to rate next.
-    func rateNext(after titleId: String, excluding: Set<String>) async -> [TitleFeatures] {
+    /// «Что хочется посмотреть?» in «Уточнить вкус».
+    func interestGrid() async -> [TitleFeatures] {
         guard let prepared = await ensurePrepared() else { return [] }
-        let ids = prepared.rateNext(after: titleId, excluding: excluding)
+        let ids = prepared.interestGrid()
         let missing = ids.filter { pool[$0] == nil }
         let stored = missing.isEmpty ? [:] : await titles.titles(missing)
         return ids.compactMap { pool[$0] ?? stored[$0] }

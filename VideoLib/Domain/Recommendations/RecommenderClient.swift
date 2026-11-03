@@ -68,8 +68,8 @@ struct RecommenderClient: Sendable {
     // «Уточнить вкус»
     /// «Что вам близко»: liked features first (pre-selected), then the common genres and countries.
     var tasteBubbles: @Sendable () async -> [FeatureAffinity]
-    /// After «Нравится» / «Обожаю»: well-known neighbours of that title to rate next.
-    var rateNext: @Sendable (_ titleId: String, _ excluding: Set<String>) async -> [TitleFeatures]
+    /// «Что хочется посмотреть?»: well-known titles not yet seen, to tick (interest, not a rating).
+    var interestGrid: @Sendable () async -> [TitleFeatures]
     /// 0…1, «Вкус изучен на N %».
     var tasteConfidence: @Sendable () async -> Double
     var recordImpressions: @Sendable (_ titleIds: [String], _ surface: String) async -> Void
@@ -128,7 +128,7 @@ extension RecommenderClient: DependencyKey {
         clearOverride: { _ in },
         overrides: { [] },
         tasteBubbles: { [] },
-        rateNext: { _, _ in [] },
+        interestGrid: { [] },
         tasteConfidence: { 0 },
         recordImpressions: { _, _ in },
         markOpened: { _ in },
