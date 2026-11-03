@@ -168,7 +168,6 @@ struct HomeFeature {
     @Dependency(\.continuousClock) private var clock
     @Dependency(\.date.now) private var now
     @Dependency(\.uuid) private var uuid
-    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()

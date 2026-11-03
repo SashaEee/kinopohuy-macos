@@ -11,7 +11,7 @@ enum AffinitySource {
 
     static func hits(_ core: EngineCore) -> [SourceHit] {
         var scored: [(title: Int, score: Double)] = []
-        for title in 0..<core.titles.count where core.isEligible(title) {
+        for title in 0..<core.titles.count where core.isEligible(title) && core.profile.tasteMatch[title] {
             let affinity = core.profile.titleAffinity[title]
             if affinity > 0 { scored.append((title, affinity)) }
         }

@@ -16,6 +16,9 @@ struct TasteProfile: Sendable {
     let positiveSupport: [Int]
     /// aff(t) per title.
     let titleAffinity: [Double]
+    /// The title shares something the user actually likes (a genre, a country, a person, a collection or list), not
+    /// only being a film of the same decade and length: what taste-based sources need before they offer it.
+    let tasteMatch: [Bool]
     /// Anchors+: the top titles with w > 0.3 (best first). Anchors−: w < −0.3.
     let anchors: [Anchor]
     let negativeAnchors: [Anchor]
@@ -95,14 +98,22 @@ enum ProfileBuilder {
         }
 
         // aff(t) = Σ g·idf·A / Σ g·idf over the title's features.
+        // A country alone is too coarse to call a title «in taste» (most of anyone's films are American); it counts
+        // only for a bare card whose genres aren't known yet.
+        let tasteGroups: Set<FeatureKey.Group> = [.genre, .director, .actor, .collection, .list]
         var titleAffinity = [Double](repeating: 0, count: titles.count)
+        var tasteMatch = [Bool](repeating: false, count: titles.count)
         for index in 0..<titles.count {
             var sum: Double = 0
             var norm: Double = 0
+            let groups = titles[index].genres.isEmpty ? tasteGroups.union([.country]) : tasteGroups
             for feature in table.ofTitle[index] {
                 let weight = table.groupWeight[feature] * table.idf[feature]
                 sum += weight * affinity[feature]
                 norm += weight
+                if affinity[feature] > weights.tasteMatchMinAffinity, groups.contains(table.keys[feature].group) {
+                    tasteMatch[index] = true
+                }
             }
             titleAffinity[index] = norm > 0 ? sum / norm : 0
         }
@@ -150,7 +161,7 @@ enum ProfileBuilder {
 
         return TasteProfile(
             affinity: affinity, support: support, positiveSupport: positiveSupport, titleAffinity: titleAffinity,
-            anchors: Array(anchors), negativeAnchors: negativeAnchors, seeds: seeds, excludedFeatures: excluded,
+            tasteMatch: tasteMatch, anchors: Array(anchors), negativeAnchors: negativeAnchors, seeds: seeds, excludedFeatures: excluded,
             genreShare: genreShare, positiveCount: positives.count, negativeCount: negatives.count, summary: summary,
         )
     }

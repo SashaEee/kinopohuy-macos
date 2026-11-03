@@ -19,7 +19,7 @@ enum QualityFreshSource {
         }
         for title in 0..<core.titles.count where core.isEligible(title) {
             let affinity = core.profile.titleAffinity[title]
-            guard cold ? affinity >= 0 : affinity > 0 else { continue }
+            guard cold ? affinity >= 0 : affinity > 0 && core.profile.tasteMatch[title] else { continue }
             let quality = core.quality[title]
 
             // Ranked lists: the best place across the title's lists.
