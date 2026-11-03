@@ -284,7 +284,7 @@ struct KPHero<Art: View, Actions: View>: View {
     var ratings: [(source: String, value: String)] = []
     var description: String?
     var descriptionLines = 3
-    /// Why it's shown («Потому что вы смотрите «Мост»»): a glass chip under the facts.
+    /// Why it's shown («Потому что вы смотрите «Мост»»): a quiet line under the facts.
     var reason: String?
     /// A title's page: the taller banner of the two (`height` overrides both).
     var details = false
@@ -418,7 +418,7 @@ struct KPHero<Art: View, Actions: View>: View {
                     }
                 }
                 if let reason, !reason.isEmpty, !isPlaceholder {
-                    KPReasonChip(text: reason)
+                    KPReasonLine(text: reason)
                         .transition(.opacity)
                 }
                 if isPlaceholder || description?.isEmpty == false {
@@ -470,35 +470,23 @@ struct KPHero<Art: View, Actions: View>: View {
     }
 }
 
-/// Why a title is shown, over a picture: a frosted capsule with a thin light edge, a spark in the sun's gradient, the
-/// reason in white. Quiet enough not to compete with the title, clear enough to read over any poster.
-struct KPReasonChip: View {
+/// Why a title is shown, as an editorial line: a short bar in the sun's colour, then the reason in plain white. No
+/// capsule, no glow: it reads as part of the page, the way a «№ 1 сегодня» line does.
+struct KPReasonLine: View {
     let text: String
 
     @Environment(\.kpMetrics) private var metrics
 
     var body: some View {
-        HStack(spacing: 7) {
-            Image(systemName: "sparkles")
-                .font(.system(size: metrics.facts - 1, weight: .semibold))
-                .foregroundStyle(KP.sunGradient)
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 1, style: .continuous)
+                .fill(KP.sun)
+                .frame(width: 2.5, height: metrics.facts + 2)
             Text(verbatim: text)
-                .font(KP.font(metrics.facts - 0.5, .semibold))
-                .foregroundStyle(KP.fg.opacity(0.92))
+                .font(KP.font(metrics.facts, .semibold))
+                .foregroundStyle(KP.fg.opacity(0.88))
                 .lineLimit(1)
         }
-        .padding(.leading, 10)
-        .padding(.trailing, 13)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .background(Capsule().fill(Color.black.opacity(0.18)))
-        .overlay(
-            Capsule().strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.06)], startPoint: .top, endPoint: .bottom),
-                lineWidth: 1
-            )
-        )
-        .environment(\.colorScheme, .dark)
         .fixedSize()
     }
 }
