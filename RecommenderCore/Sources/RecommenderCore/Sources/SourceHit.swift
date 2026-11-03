@@ -39,6 +39,7 @@ enum CandidateSources {
         [
             GraphSource.ranking(core),
             ViewersSource.ranking(core),
+            PlotSource.ranking(core),
             ContinuationSource.ranking(core),
             IntentSource.ranking(core),
             AffinitySource.ranking(core),

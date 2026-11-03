@@ -171,3 +171,32 @@ struct SourceTests {
         #expect(found == ["3"])
     }
 }
+
+/// S8 and S9: neighbours of liked titles, by viewers or by plot, weighted by how much each liked title weighs.
+@Suite("Neighbour sources S8–S9")
+struct NeighbourSourceTests {
+    @Test func likedTitlesBringTheirNeighbours() throws {
+        let titles = (1...6).map { Fixture.film("\($0)") }
+        var signals = UserSignals()
+        signals.sessions = [Fixture.watched("1", daysAgo: 1), Fixture.watched("2", daysAgo: 300)]
+        let viewers: [String: [ViewerNeighbour]] = [
+            "1": [ViewerNeighbour(titleId: "3", score: 0.6), ViewerNeighbour(titleId: "2", score: 0.9)],
+            "2": [ViewerNeighbour(titleId: "4", score: 0.6)],
+        ]
+        let plot: [String: [ViewerNeighbour]] = ["1": [ViewerNeighbour(titleId: "5", score: 0.5)]]
+        var input = Fixture.input(titles: titles, signals: signals)
+        input.viewerNeighbours = viewers
+        input.plotNeighbours = plot
+        var timings: [String: Double] = [:]
+        let core = EngineCore.build(input, timings: &timings)
+        let hits = ViewersSource.hits(core).map { core.titles[$0.title].id }
+        // A watched title isn't recommended; the recent one's neighbour outranks the old one's.
+        #expect(!hits.contains("2"))
+        #expect(hits.first == "3")
+        #expect(hits.contains("4"))
+        let byPlot = ViewersSource.hits(core.plotNeighbours, core).map { core.titles[$0.title].id }
+        #expect(byPlot == ["5"])
+        let evidence = try #require(ViewersSource.hits(core).first?.evidence)
+        #expect(evidence.anchorIds == ["1"])
+    }
+}

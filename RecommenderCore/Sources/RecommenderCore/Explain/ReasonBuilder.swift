@@ -75,7 +75,7 @@ enum ReasonBuilder {
         for contribution in scored.contributions {
             let evidence = contribution.evidence
             switch contribution.source {
-            case .graph, .viewers:
+            case .graph, .viewers, .plot:
                 add(anchorReason(evidence.anchorIds, evidence: evidence, core: core, options: options), contribution.value)
             case .continuation:
                 add(continuationReason(scored.title, evidence: evidence, core: core), contribution.value)

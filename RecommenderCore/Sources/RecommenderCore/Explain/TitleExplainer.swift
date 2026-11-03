@@ -55,6 +55,9 @@ enum TitleExplainer {
             return graphSentence(evidence, core: core)
         case .viewers:
             return viewersSentence(evidence, core: core)
+        case .plot:
+            let names = evidence.anchorIds.prefix(2).compactMap { core.titleIndex[$0].map { RussianText.quoted(core.titles[$0].name) } }
+            return names.isEmpty ? nil : "Похоже по сюжету на " + names.joined(separator: " и ")
         case .continuation:
             return ReasonBuilder.continuationReason(title, evidence: evidence, core: core)?.long
         case .intent:

@@ -8,19 +8,26 @@ enum ViewersSource {
     static let limit = 400
 
     static func ranking(_ core: EngineCore) -> SourceRanking {
-        SourceRanking(kind: .viewers, hits: hits(core), limit: limit)
+        SourceRanking(kind: .viewers, hits: hits(core.viewerNeighbours, core), limit: limit)
     }
 
     static func hits(_ core: EngineCore) -> [SourceHit] {
-        guard !core.viewerNeighbours.isEmpty else { return [] }
+        hits(core.viewerNeighbours, core)
+    }
+
+    /// Each seed's neighbours (by viewers or by plot) by the seed's weight times their score.
+    static func hits(_ lists: [Int: [(title: Int, score: Double)]], _ core: EngineCore) -> [SourceHit] {
+        guard !lists.isEmpty else { return [] }
         var score: [Int: Double] = [:]
         var from: [Int: [(anchor: Int, value: Double)]] = [:]
-        for anchor in core.profile.seeds {
-            guard let neighbours = core.viewerNeighbours[anchor.title] else { continue }
+        // Every liked title counts by its weight (old ones already weigh less): the strong anchors alone are too few
+        // when the user's history is mostly what the site's lists know.
+        for signal in core.orderedSignals where signal.weight > 0 && !signal.notSeed {
+            guard let anchor = core.titleIndex[signal.titleId], let neighbours = lists[anchor] else { continue }
             for neighbour in neighbours where core.isEligible(neighbour.title) {
-                let value = anchor.weight * neighbour.score
+                let value = signal.weight * neighbour.score
                 score[neighbour.title, default: 0] += value
-                from[neighbour.title, default: []].append((anchor.title, value))
+                from[neighbour.title, default: []].append((anchor, value))
             }
         }
         let ranked = score.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(limit)
@@ -31,5 +38,13 @@ enum ViewersSource {
                 evidence: Evidence(anchorIds: anchors.prefix(3).map { core.titles[$0.anchor].id }, count: anchors.count),
             )
         }
+    }
+}
+
+/// S9: close by plot — the descriptions of the user's anchors and the candidates, compared by meaning (on-device
+/// embeddings, centred). Finds the same story in another genre's clothes; only among titles whose page was read.
+enum PlotSource {
+    static func ranking(_ core: EngineCore) -> SourceRanking {
+        SourceRanking(kind: .plot, hits: ViewersSource.hits(core.plotNeighbours, core), limit: ViewersSource.limit)
     }
 }

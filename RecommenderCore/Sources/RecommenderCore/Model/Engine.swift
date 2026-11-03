@@ -93,6 +93,8 @@ public enum SourceKind: String, Codable, Sendable, Hashable, CaseIterable {
     case exploration
     /// S8: what viewers who liked the user's titles liked too (MovieLens, by IMDb id).
     case viewers
+    /// S9: close by plot (the descriptions' meaning, on-device embeddings).
+    case plot
 }
 
 /// Why a title is recommended: the kind decides the template (and its priority when contributions are close).
@@ -316,11 +318,14 @@ public struct EngineInput: Codable, Sendable {
     /// «Those who liked X also liked Y» for pool titles (title id → neighbours in the pool, best first), from the data
     /// pack; nil without one.
     public var viewerNeighbours: [String: [ViewerNeighbour]]?
+    /// Pool titles close by plot (title id → neighbours, best first, score 0…1), from the descriptions; nil without.
+    public var plotNeighbours: [String: [ViewerNeighbour]]?
 
     public init(
         context: EngineContext, titles: [TitleFeatures], signals: UserSignals, settings: RecommenderSettings,
         weights: Weights = .default, seed: UInt64
-    , viewerNeighbours: [String: [ViewerNeighbour]]? = nil) {
+    , viewerNeighbours: [String: [ViewerNeighbour]]? = nil,
+        plotNeighbours: [String: [ViewerNeighbour]]? = nil) {
         self.context = context
         self.titles = titles
         self.signals = signals
@@ -328,6 +333,7 @@ public struct EngineInput: Codable, Sendable {
         self.weights = weights
         self.seed = seed
         self.viewerNeighbours = viewerNeighbours
+        self.plotNeighbours = plotNeighbours
     }
 
     /// Weights are optional in JSON (an export without them, or with a partial set, uses the defaults).
@@ -339,6 +345,8 @@ public struct EngineInput: Codable, Sendable {
         settings = try c.decodeIfPresent(RecommenderSettings.self, forKey: .settings) ?? RecommenderSettings()
         weights = try c.decodeIfPresent(Weights.self, forKey: .weights) ?? .default
         seed = try c.decodeIfPresent(UInt64.self, forKey: .seed) ?? 0
+        viewerNeighbours = try c.decodeIfPresent([String: [ViewerNeighbour]].self, forKey: .viewerNeighbours)
+        plotNeighbours = try c.decodeIfPresent([String: [ViewerNeighbour]].self, forKey: .plotNeighbours)
     }
 }
 

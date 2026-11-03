@@ -146,6 +146,7 @@ extension SourceKind {
         case .qualityFresh: 5
         case .exploration: 6
         case .viewers: 7
+        case .plot: 8
         }
     }
 }

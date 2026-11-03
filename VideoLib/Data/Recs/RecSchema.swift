@@ -14,6 +14,15 @@ enum RecSchema {
         }
     }
 
+    /// «Похоже по сюжету»: each read description as a vector (Float32), made on this Mac.
+    static func migrateV6(_ db: Database) throws {
+        try db.create(table: "title_vector", options: [.ifNotExists, .strict]) { t in
+            t.column("titleId", .text).notNull().primaryKey()
+            t.column("vector", .blob).notNull()
+            t.column("updatedAt", .real).notNull()
+        }
+    }
+
     static func migrateV4(_ db: Database) throws {
         // «Досмотреть» as the site last showed it (one request gives the whole list, so it's replaced each time).
         try db.create(table: "account_list", options: [.ifNotExists, .strict]) { t in

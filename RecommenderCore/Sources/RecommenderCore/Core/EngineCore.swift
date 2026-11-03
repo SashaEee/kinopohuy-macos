@@ -37,6 +37,8 @@ struct EngineCore: Sendable {
     let negProximity: [Double]
     /// Viewer neighbours by title index (S8), best first.
     let viewerNeighbours: [Int: [(title: Int, score: Double)]]
+    /// Plot neighbours by title index (S9), best first.
+    let plotNeighbours: [Int: [(title: Int, score: Double)]]
 
     var now: Double { context.now }
     var isGuestPool: Bool { !settings.useLocalHistory && !settings.useAccountList }
@@ -137,12 +139,17 @@ struct EngineCore: Sendable {
         }
         lap("filters")
 
-        var viewerNeighbours: [Int: [(title: Int, score: Double)]] = [:]
-        for (id, neighbours) in input.viewerNeighbours ?? [:] {
-            guard let title = titleIndex[id] else { continue }
-            let mapped = neighbours.compactMap { n in titleIndex[n.titleId].map { (title: $0, score: n.score) } }
-            if !mapped.isEmpty { viewerNeighbours[title] = mapped }
+        func indexed(_ lists: [String: [ViewerNeighbour]]?) -> [Int: [(title: Int, score: Double)]] {
+            var result: [Int: [(title: Int, score: Double)]] = [:]
+            for (id, neighbours) in lists ?? [:] {
+                guard let title = titleIndex[id] else { continue }
+                let mapped = neighbours.compactMap { n in titleIndex[n.titleId].map { (title: $0, score: n.score) } }
+                if !mapped.isEmpty { result[title] = mapped }
+            }
+            return result
         }
+        let viewerNeighbours = indexed(input.viewerNeighbours)
+        let plotNeighbours = indexed(input.plotNeighbours)
 
         return EngineCore(
             context: input.context, settings: input.settings, weights: weights, seed: input.seed,
@@ -150,7 +157,7 @@ struct EngineCore: Sendable {
             orderedSignals: orderedSignals, signalAt: signalAt, table: table, profile: profile, graph: graph,
             filters: filters, filterReason: filterReason, newSeasons: newSeasons, qualityRating: qualityRating,
             quality: quality, freshness: freshness, rankForYou: rankForYou, rankDiscover: rankDiscover,
-            negProximity: negProximity, viewerNeighbours: viewerNeighbours,
+            negProximity: negProximity, viewerNeighbours: viewerNeighbours, plotNeighbours: plotNeighbours,
         )
     }
 

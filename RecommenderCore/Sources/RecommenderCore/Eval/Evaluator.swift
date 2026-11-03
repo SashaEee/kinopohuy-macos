@@ -92,6 +92,7 @@ public enum Evaluator {
         case .qualityFresh: "S6 качество"
         case .exploration: "S7 новое"
         case .viewers: "S8 зрители"
+        case .plot: "S9 сюжет"
         }
     }
 

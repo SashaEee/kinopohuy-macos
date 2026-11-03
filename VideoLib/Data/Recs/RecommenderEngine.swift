@@ -44,6 +44,8 @@ actor RecommenderEngine {
     private let broadcaster: RecBroadcaster
     /// The open data pack: critics' scores, missing IMDb ids, viewer neighbours.
     private let pack = RecsPack()
+    /// «Похоже по сюжету»: the descriptions' meaning, compared on this Mac.
+    private let plot: PlotIndex
 
     private var prepared: PreparedEngine?
     private var snapshot: RecSnapshot?
@@ -65,6 +67,7 @@ actor RecommenderEngine {
         self.titles = titles
         self.signals = signals
         self.broadcaster = broadcaster
+        plot = PlotIndex(database: titles.database)
     }
 
     // MARK: Home
@@ -312,6 +315,7 @@ actor RecommenderEngine {
         let (stored, signalsNow) = await (poolTitles, userSignals)
         await pack.remember(titles.packLookups().compactMapValues { $0 }.reduce(into: [:]) { $0[$1.value] = $1.key })
         let (titlesList, viewerNeighbours) = await pack.enrich(stored)
+        let plotNeighbours = await plot.neighbours(for: titlesList)
 
         let input = EngineInput(
             context: EngineContext(date: now),
@@ -321,6 +325,7 @@ actor RecommenderEngine {
             weights: .default,
             seed: Self.seed(day: now, salt: salt),
             viewerNeighbours: viewerNeighbours,
+            plotNeighbours: plotNeighbours,
         )
         #if DEBUG
             // KP_REC_DUMP=1: the engine's whole input as JSON (rec-input.json in the app's temporary folder, the one place

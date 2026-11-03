@@ -371,7 +371,12 @@ struct HomeAssembler {
     func discoveryCandidates(inRanked: Set<Int>) -> [Int] {
         var titles = Set<Int>()
         for hit in rankings[.exploration]?.hits ?? [] where inRanked.contains(hit.title) { titles.insert(hit.title) }
-        for hit in farHits where inRanked.contains(hit.title) { titles.insert(hit.title) }
+        // A far link of the site's graph is only a find when it's in the user's taste and well rated (Bayesian 7+):
+        // otherwise it's just far.
+        for hit in farHits where inRanked.contains(hit.title) && core.profile.tasteMatch[hit.title]
+            && (core.qualityRating[hit.title] ?? 0) >= 7 {
+            titles.insert(hit.title)
+        }
         return titles.sorted {
             let lhs = scoreOf[$0]?.score ?? 0
             let rhs = scoreOf[$1]?.score ?? 0
