@@ -7,6 +7,8 @@ import SwiftUI
 /// about the user and the title.
 struct FitVerdictView: View {
     let titleId: String
+    /// A title page's fact row: its label in the page's left column («Вам подойдёт?»), shown only with a verdict.
+    var label: String?
 
     @State private var verdict: FitVerdict?
     @Dependency(\.recommender) private var recommender
@@ -14,22 +16,14 @@ struct FitVerdictView: View {
     var body: some View {
         Group {
             if let verdict, !(verdict.pros.isEmpty && verdict.cons.isEmpty) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: symbol(verdict.level))
-                            .font(.system(size: 12, weight: .bold))
-                        Text(verbatim: label(verdict.level))
-                            .font(KP.font(13, .bold))
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
+                    if let label {
+                        Text(verbatim: label)
+                            .font(KP.font(13, .medium))
+                            .foregroundStyle(KP.fg38)
+                            .frame(width: 108, alignment: .leading)
                     }
-                    .foregroundStyle(color(verdict.level))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(color(verdict.level).opacity(0.14)))
-
-                    Text(verbatim: (verdict.pros.prefix(2).map { "+ \($0)" } + verdict.cons.prefix(1).map { "− \($0)" }).joined(separator: "  ·  "))
-                        .font(KP.font(13, .medium))
-                        .foregroundStyle(KP.fg70)
-                        .lineLimit(2)
+                    content(verdict)
                 }
                 .help("Как это сходится с тем, что вы смотрели и оценивали")
                 .transition(.opacity)
@@ -41,7 +35,27 @@ struct FitVerdictView: View {
         }
     }
 
-    private func label(_ level: FitVerdict.Level) -> String {
+    private func content(_ verdict: FitVerdict) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol(verdict.level))
+                    .font(.system(size: 12, weight: .bold))
+                Text(verbatim: levelText(verdict.level))
+                    .font(KP.font(13, .bold))
+            }
+            .foregroundStyle(color(verdict.level))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(color(verdict.level).opacity(0.14)))
+
+            Text(verbatim: (verdict.pros.prefix(2).map { "+ \($0)" } + verdict.cons.prefix(1).map { "− \($0)" }).joined(separator: "  ·  "))
+                .font(KP.font(13, .medium))
+                .foregroundStyle(KP.fg70)
+                .lineLimit(2)
+        }
+    }
+
+    private func levelText(_ level: FitVerdict.Level) -> String {
         switch level {
         case .likely: "Скорее зайдёт"
         case .maybe: "50 на 50"

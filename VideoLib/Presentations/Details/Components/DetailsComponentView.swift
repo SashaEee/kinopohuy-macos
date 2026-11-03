@@ -487,10 +487,12 @@ struct DetailsComponentView: View {
                         }
                     }
                     // Right under the site's stars: what you think, for the recommendations (kept on this Mac).
-                    if store.feedback.titleId != nil {
+                    if let titleId = store.feedback.titleId {
                         FactRow(label: "Ваша оценка") {
                             FeedbackBarView(store: store.scope(state: \.feedback, action: \.feedback))
                         }
+                        // «Вам подойдёт?»: only once the recommender knows enough to say (the row stays out otherwise).
+                        FitVerdictView(titleId: titleId, label: "Вам подойдёт?")
                     }
                     if details.imdbRating != nil || details.kpRating != nil || details.waRating != nil {
                         FactRow(label: "Оценки") {

@@ -120,7 +120,6 @@ struct HomeFeature {
         case tonightPromote(String)
         case tonightFeedback(TonightFeedback)
         case pickForMeTapped
-        case tuneTasteTapped
         case switchWatched(MovieWatchLater)
         case watchedSwitched(MovieWatchLater, Result<Bool, any Error>)
         case remove(MovieWatchLater)
@@ -136,8 +135,6 @@ struct HomeFeature {
             case showWatchingLater
             /// The dice on the banner: «Выбери за меня».
             case pickForMe
-            /// «Уточнить вкус» on the learning card: the taste stack.
-            case tuneTaste
         }
 
         enum Alert: Equatable {}
@@ -430,9 +427,6 @@ struct HomeFeature {
 
             case .pickForMeTapped:
                 return .send(.delegate(.pickForMe))
-
-            case .tuneTasteTapped:
-                return .send(.delegate(.tuneTaste))
 
             case .seriesUpdatesTapped:
                 state.seriesUpdates = SeriesUpdatesFeature.State()

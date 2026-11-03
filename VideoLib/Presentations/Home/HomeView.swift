@@ -15,6 +15,7 @@ struct HomeView: View {
     @Environment(\.appearsActive) private var appearsActive
     @State private var heroOnScreen = true
     @State private var whyPresented = false
+    @State private var tastePresented = false
     @Default(.recHeroMode) private var heroMode
 
     /// The banner is the recommender's pick, not the trends.
@@ -58,7 +59,7 @@ struct HomeView: View {
 
                 if store.recLearning {
                     RecLearningCard(status: store.recStatus) {
-                        store.send(.tuneTasteTapped)
+                        tastePresented = true
                     }
                     .transition(.opacity)
                 }
@@ -148,6 +149,9 @@ struct HomeView: View {
         }
         .alert($store.scope(state: \.alert, action: \.alert))
         .dialogSeverity(.critical)
+        // «Уточнить вкус» from the learning card, and the stack offered once on its own when it's worth it.
+        .kpTasteOnboardingSheet(isPresented: $tastePresented)
+        .kpTasteOnboardingOffer(after: .seconds(4))
         .kpScreenBackground()
     }
 
