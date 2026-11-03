@@ -112,6 +112,38 @@ struct SignalStore: Sendable {
         }) ?? []
     }
 
+    // MARK: Imported ratings
+
+    struct ImportedRating: Sendable {
+        let imdb: Int
+        let level: Double
+        let source: ExplicitRating.Source
+        let ratedAt: Double?
+    }
+
+    /// Replaces what came from the same source before (a new export has everything the old one had).
+    func saveImported(_ ratings: [ImportedRating], source: ExplicitRating.Source) async {
+        _ = try? await database.write { db in
+            try db.execute(sql: "DELETE FROM imported_rating WHERE source = ?", arguments: [source.rawValue])
+            for rating in ratings {
+                try db.execute(
+                    sql: "INSERT OR REPLACE INTO imported_rating (imdb, level, source, ratedAt) VALUES (?, ?, ?, ?)",
+                    arguments: [rating.imdb, rating.level, rating.source.rawValue, rating.ratedAt],
+                )
+            }
+        }
+    }
+
+    func importedRatings() async -> [ImportedRating] {
+        (try? await database.read { db in
+            try Row.fetchAll(db, sql: "SELECT imdb, level, source, ratedAt FROM imported_rating").compactMap { row -> ImportedRating? in
+                let source: String = row["source"]
+                guard let kind = ExplicitRating.Source(rawValue: source) else { return nil }
+                return ImportedRating(imdb: row["imdb"], level: row["level"], source: kind, ratedAt: row["ratedAt"])
+            }
+        }) ?? []
+    }
+
     // MARK: Impressions
 
     func recordImpressions(_ titleIds: [String], surface: String, now: Date = .now) async {

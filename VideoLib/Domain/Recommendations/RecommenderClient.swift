@@ -21,6 +21,14 @@ struct RecSnapshot: Equatable, Sendable {
     }
 }
 
+/// What «Импорт оценок» did: rows read, films recognised, and how many of those the app has already met on the site.
+struct RatingImportResult: Equatable, Sendable {
+    var source: String
+    var total: Int
+    var matched: Int
+    var onSite: Int
+}
+
 /// The critics' scores the data pack has for a title.
 struct CriticScores: Equatable, Sendable {
     var rottenTomatoes: Int?
@@ -81,6 +89,8 @@ struct RecommenderClient: Sendable {
     /// Rotten Tomatoes (critics, %) and Metacritic (0–100) for a title page, from the data pack, by its IMDb id or its
     /// Kinopoisk id.
     var critics: @Sendable (_ imdbId: String?, _ kpId: Int?) async -> CriticScores?
+    /// «Импорт оценок»: the text of an IMDb or Letterboxd CSV export; nil when it's neither.
+    var importRatings: @Sendable (_ csv: String) async -> RatingImportResult?
     var recordImpressions: @Sendable (_ titleIds: [String], _ surface: String) async -> Void
     var markOpened: @Sendable (_ titleId: String) async -> Void
     /// A playing session ended (the player calls it on pause, close and end).
@@ -140,6 +150,7 @@ extension RecommenderClient: DependencyKey {
         interestGrid: { [] },
         tasteConfidence: { 0 },
         critics: { _, _ in nil },
+        importRatings: { _ in nil },
         recordImpressions: { _, _ in },
         markOpened: { _ in },
         logSession: { _ in },

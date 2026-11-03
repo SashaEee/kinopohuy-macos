@@ -145,7 +145,29 @@ actor RecommenderEngine {
     func viewerSuggestions(limit: Int) async -> [RecsPack.Suggestion] {
         guard let prepared = await ensurePrepared(), await pack.isAvailable else { return [] }
         let looked = Set(await titles.packLookups().keys)
-        return await pack.suggestions(seeds: prepared.tasteSeeds(), excluding: looked, limit: limit)
+        let imported = await signals.importedRatings().filter { $0.level > 0 }.map { (imdb: $0.imdb, weight: $0.level / 2) }
+        return await pack.suggestions(seeds: prepared.tasteSeeds(), imported: imported, excluding: looked, limit: limit)
+    }
+
+    /// «Импорт оценок»: an IMDb or Letterboxd CSV export, saved by IMDb id (Letterboxd's names matched through the
+    /// data pack); then Home rebuilds. Nil when the file is neither.
+    func importRatings(_ text: String) async -> RatingImportResult? {
+        guard let parsed = RatingImport.parse(text) else { return nil }
+        let source: ExplicitRating.Source = parsed.format == .imdb ? .imdb : .letterboxd
+        var saved: [SignalStore.ImportedRating] = []
+        for entry in parsed.entries {
+            var imdb = entry.imdb
+            if imdb == nil, let name = entry.name { imdb = await pack.imdb(english: name, year: entry.year) }
+            guard let imdb else { continue }
+            saved.append(SignalStore.ImportedRating(imdb: imdb, level: entry.level, source: source, ratedAt: entry.ratedAt))
+        }
+        await signals.saveImported(saved, source: source)
+        let titleByImdb = await pack.titleByImdb
+        await rebuildNow()
+        return RatingImportResult(
+            source: parsed.format == .imdb ? "IMDb" : "Letterboxd", total: parsed.entries.count, matched: saved.count,
+            onSite: saved.count { titleByImdb[$0.imdb] != nil },
+        )
     }
 
     /// Rotten Tomatoes and Metacritic for a title page (from the data pack).
@@ -312,9 +334,19 @@ actor RecommenderEngine {
         async let poolTitles = titles.pool(now: now)
         async let userSignals = signals.signals(signedIn: Defaults[.isLoggedIn], now: now)
         let salt = await profileSalt()
-        let (stored, signalsNow) = await (poolTitles, userSignals)
+        let (stored, storedSignals) = await (poolTitles, userSignals)
         await pack.remember(titles.packLookups().compactMapValues { $0 }.reduce(into: [:]) { $0[$1.value] = $1.key })
         let (titlesList, viewerNeighbours) = await pack.enrich(stored)
+        // Imported ratings of titles the pool has count as the user's own (an app rating, when there is one, wins).
+        var signalsNow = storedSignals
+        let rated = Set(signalsNow.ratings.map(\.titleId))
+        let titleByImdb = await pack.titleByImdb
+        for imported in await signals.importedRatings() {
+            guard let titleId = titleByImdb[imported.imdb], !rated.contains(titleId) else { continue }
+            signalsNow.ratings.append(ExplicitRating(
+                titleId: titleId, level: imported.level, source: imported.source, createdAt: imported.ratedAt ?? now.timeIntervalSince1970,
+            ))
+        }
         let plotNeighbours = await plot.neighbours(for: titlesList)
 
         let input = EngineInput(
@@ -344,7 +376,7 @@ actor RecommenderEngine {
         pool = Dictionary(titlesList.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let snapshot = RecSnapshot(output: prepared.output, titles: referencedTitles(prepared.output), builtAt: now)
         self.snapshot = snapshot
-        await writeCache(snapshot, profileHash: Self.profileHash(signalsNow, settings))
+        await writeCache(snapshot, profileHash: Self.profileHash(storedSignals, settings))
         broadcaster.send()
     }
 

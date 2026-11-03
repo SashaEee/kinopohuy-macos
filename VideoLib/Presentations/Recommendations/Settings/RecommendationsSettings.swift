@@ -123,6 +123,18 @@ struct RecommendationsSettings: View {
                     .help("Оценить до 12 своих тайтлов и выбрать, чего не показывать — около минуты")
 
                     Button {
+                        importRatings()
+                    } label: {
+                        Label {
+                            Text(verbatim: "Импорт оценок…")
+                        } icon: {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                    }
+                    .buttonStyle(KPSecondaryButtonStyle(size: 13))
+                    .help("Оценки из IMDb (Your Ratings → Export) или Letterboxd (Settings → Import & Export): файл CSV")
+
+                    Button {
                         export()
                     } label: {
                         Label {
@@ -398,6 +410,28 @@ struct RecommendationsSettings: View {
             withAnimation(.smooth(duration: 0.25)) {
                 if self.notice == notice { self.notice = nil }
             }
+        }
+    }
+
+    /// «Импорт оценок…»: an IMDb or Letterboxd CSV export; what was recognised is said in the line beside the buttons.
+    private func importRatings() {
+        Task {
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = [.commaSeparatedText, .plainText]
+            panel.allowsMultipleSelection = false
+            panel.message = "Файл оценок из IMDb (ratings.csv) или Letterboxd (ratings.csv / diary.csv)"
+            panel.prompt = "Импортировать"
+            guard await panel.begin() == .OK, let url = panel.url,
+                  let text = try? String(contentsOf: url, encoding: .utf8)
+            else { return }
+            guard let result = await recommender.importRatings(text) else {
+                show(.taste("Это не экспорт IMDb или Letterboxd", ok: false))
+                return
+            }
+            show(.taste(
+                "\(result.source): узнали \(result.matched) из \(result.total), на сайте уже нашлось \(result.onSite) — остальные подтянутся в фоне",
+                ok: result.matched > 0
+            ))
         }
     }
 

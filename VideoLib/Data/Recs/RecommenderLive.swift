@@ -232,6 +232,7 @@ extension RecommenderClient {
             guard let facts = await RecRuntime.shared.engine.critics(imdbId: imdbId, kpId: kpId), facts.rt != nil || facts.mc != nil else { return nil }
             return CriticScores(rottenTomatoes: facts.rt, metacritic: facts.mc)
         },
+        importRatings: { csv in await RecRuntime.shared.engine.importRatings(csv) },
         recordImpressions: { titleIds, surface in await RecRuntime.shared.signals.recordImpressions(titleIds, surface: surface) },
         markOpened: { titleId in await RecRuntime.shared.signals.markOpened(titleId) },
         logSession: { session in

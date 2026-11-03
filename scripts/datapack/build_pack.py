@@ -5,7 +5,7 @@
                                  [--out build/datapack/recs-pack.sqlite]
 
 Tables:
-  title(imdb, kp, year, ru, ru_key, en, rt, mc, likes, mean)  one row per IMDb id; en is MovieLens's English title
+  title(imdb, kp, year, ru, ru_key, en, en_key, rt, mc, likes, mean)  one row per IMDb id; en is MovieLens's English title
                                                            (to search the site for films without a Russian one);
                                                            ru_key is the Russian title folded
                                                            (lower case, ё→е, letters and digits only) for matching
@@ -84,8 +84,8 @@ def main():
     db = sqlite3.connect(args.out)
     db.executescript("""
         CREATE TABLE title (
-            imdb INTEGER PRIMARY KEY, kp INTEGER, year INTEGER, ru TEXT, ru_key TEXT, en TEXT, rt INTEGER, mc INTEGER,
-            likes INTEGER, mean REAL
+            imdb INTEGER PRIMARY KEY, kp INTEGER, year INTEGER, ru TEXT, ru_key TEXT, en TEXT, en_key TEXT, rt INTEGER,
+            mc INTEGER, likes INTEGER, mean REAL
         );
         CREATE TABLE neighbour (imdb INTEGER NOT NULL, other INTEGER NOT NULL, score REAL NOT NULL,
             PRIMARY KEY (imdb, other)) WITHOUT ROWID;
@@ -95,8 +95,9 @@ def main():
     # nothing the title page doesn't already say).
     useful = {imdb: r for imdb, r in titles.items() if r["rt"] is not None or r["mc"] is not None or r.get("likes")}
     db.executemany(
-        "INSERT INTO title VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ((imdb, r["kp"], r["year"], r["ru"], fold(r["ru"]) or None, r.get("en"), r["rt"], r["mc"], r.get("likes"), r.get("mean"))
+        "INSERT INTO title VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ((imdb, r["kp"], r["year"], r["ru"], fold(r["ru"]) or None, r.get("en"), fold(r.get("en")) or None, r["rt"], r["mc"],
+          r.get("likes"), r.get("mean"))
          for imdb, r in useful.items()),
     )
     titles = useful
@@ -104,6 +105,7 @@ def main():
     db.executescript("""
         CREATE INDEX title_kp ON title(kp) WHERE kp IS NOT NULL;
         CREATE INDEX title_ru ON title(ru_key, year) WHERE ru_key IS NOT NULL;
+        CREATE INDEX title_en ON title(en_key, year) WHERE en_key IS NOT NULL;
     """)
     db.executemany("INSERT INTO meta VALUES (?, ?)", [
         ("version", str(VERSION)),

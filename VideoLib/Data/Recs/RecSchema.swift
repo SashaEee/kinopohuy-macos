@@ -14,6 +14,17 @@ enum RecSchema {
         }
     }
 
+    /// Ratings imported from IMDb or Letterboxd, by IMDb id (titles the site may not have yet still steer the
+    /// suggestions), on the three-level scale.
+    static func migrateV7(_ db: Database) throws {
+        try db.create(table: "imported_rating", options: [.ifNotExists, .strict]) { t in
+            t.column("imdb", .integer).notNull().primaryKey()
+            t.column("level", .real).notNull()
+            t.column("source", .text).notNull()
+            t.column("ratedAt", .real)
+        }
+    }
+
     /// «Похоже по сюжету»: each read description as a vector (Float32), made on this Mac.
     static func migrateV6(_ db: Database) throws {
         try db.create(table: "title_vector", options: [.ifNotExists, .strict]) { t in

@@ -32,8 +32,9 @@ actor RecsPack {
         let score: Double
     }
 
-    /// The IMDb ids of the pool as last enriched.
+    /// The IMDb ids of the pool as last enriched, and which pool title each one is.
     private var poolImdbs: Set<Int> = []
+    private(set) var titleByImdb: [Int: String] = [:]
 
     private struct Loaded: Sendable {
         var facts: [Int: Facts] = [:]
@@ -63,12 +64,34 @@ actor RecsPack {
 
     /// What viewers of the user's titles liked that the pool lacks, best first: each seed's neighbours by the seed's
     /// weight times their score, without the pool's titles and what was already looked up.
-    func suggestions(seeds: [(titleId: String, weight: Double)], excluding looked: Set<Int>, limit: Int) async -> [Suggestion] {
+    func suggestions(
+        seeds: [(titleId: String, weight: Double)], imported: [(imdb: Int, weight: Double)] = [], excluding looked: Set<Int>,
+        limit: Int,
+    ) async -> [Suggestion] {
         guard let database, limit > 0 else { return [] }
+        // Imported ratings of films the pool doesn't have: their neighbours are loaded here.
+        let unloaded = imported.map(\.imdb).filter { neighbours[$0] == nil }
+        if !unloaded.isEmpty {
+            let loaded: [Int: [Neighbour]] = (try? await database.read { db in
+                var loaded: [Int: [Neighbour]] = [:]
+                for chunk in unloaded.chunked(500) {
+                    let list = chunk.map(String.init).joined(separator: ",")
+                    for row in try Row.fetchAll(db, sql: "SELECT imdb, other, score FROM neighbour WHERE imdb IN (\(list)) ORDER BY imdb, score DESC") {
+                        let imdb: Int = row["imdb"]
+                        loaded[imdb, default: []].append(Neighbour(imdb: row["other"], score: row["score"]))
+                    }
+                }
+                return loaded
+            }) ?? [:]
+            for imdb in unloaded { neighbours[imdb] = loaded[imdb] ?? [] }
+        }
+        let rated = Set(imported.map(\.imdb))
         var score: [Int: Double] = [:]
-        for seed in seeds {
-            guard let imdb = imdbByTitle[seed.titleId] ?? nil else { continue }
-            for neighbour in neighbours[imdb] ?? [] where !poolImdbs.contains(neighbour.imdb) && !looked.contains(neighbour.imdb) {
+        let all = seeds.compactMap { seed in (imdbByTitle[seed.titleId] ?? nil).map { (imdb: $0, weight: seed.weight) } } + imported
+        for seed in all {
+            for neighbour in neighbours[seed.imdb] ?? [] where !poolImdbs.contains(neighbour.imdb) && !looked.contains(neighbour.imdb)
+                && !rated.contains(neighbour.imdb)
+            {
                 score[neighbour.imdb, default: 0] += seed.weight * neighbour.score
             }
         }
@@ -134,6 +157,7 @@ actor RecsPack {
         // 3. The pool as the engine gets it.
         poolImdbs = numbers
         var titleByImdb: [Int: String] = [:]
+        defer { self.titleByImdb = titleByImdb }
         let enriched = titles.map { title in
             guard let imdb = imdbByTitle[title.id] ?? nil else { return title }
             var title = title
@@ -153,6 +177,17 @@ actor RecsPack {
             if !near.isEmpty { result[id] = near }
         }
         return (enriched, result)
+    }
+
+    /// A Letterboxd row's film: its English title and year (±1), when exactly one film fits.
+    func imdb(english name: String, year: Int?) async -> Int? {
+        guard let database, let year else { return nil }
+        let key = Self.fold(name)
+        guard !key.isEmpty else { return nil }
+        let matches = (try? await database.read { db in
+            try Int.fetchAll(db, sql: "SELECT imdb FROM title WHERE en_key = ? AND year BETWEEN ? AND ?", arguments: [key, year - 1, year + 1])
+        }) ?? []
+        return matches.count == 1 ? matches[0] : nil
     }
 
     /// The critics' scores for a title page: by its IMDb id, else its Kinopoisk id.
