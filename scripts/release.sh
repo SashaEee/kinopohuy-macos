@@ -192,6 +192,18 @@ ditto "$BUILT" "$APP"
 [ -d "$APP/Contents/Resources/ru.lproj" ] || die "the build has no ru.lproj"
 find "$APP/Contents/Resources" -maxdepth 1 -name '*.lproj' ! -name 'ru.lproj' ! -name 'Base.lproj' -exec rm -rf {} +
 
+# The recommender's open data pack (scripts/datapack: Wikidata's critics and ids, viewer neighbours), built on this
+# Mac and kept out of git; the app reads it from its Resources.
+PACK=build/datapack/recs-pack.sqlite
+if [ -f "$PACK" ]; then
+  cp "$PACK" "$APP/Contents/Resources/recs-pack.sqlite"
+  echo "  data pack: $(sqlite3 -readonly "$PACK" "select value from meta where key = 'built'") ($(du -h "$PACK" | cut -f1 | tr -d ' '))"
+elif $SKIP_SIGN; then
+  warn "no data pack ($PACK): the app goes without critics' scores and viewer suggestions"
+else
+  die "no data pack: run scripts/datapack/wikidata.py, the neighbours step and build_pack.py (see scripts/datapack)"
+fi
+
 xattr -cr "$APP"
 
 # Xcode's own entitlements, with $(PRODUCT_BUNDLE_IDENTIFIER) already expanded (Sparkle's -spks/-spki lookups).
