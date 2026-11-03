@@ -79,7 +79,7 @@ struct EngineEndToEndTests {
             #expect(!reason.evidence.anchorIds.isEmpty)
             for anchor in reason.evidence.anchorIds {
                 // «Потому что вы досмотрели «X»» only for a title that really weighs that much.
-                #expect((output.titleWeights[anchor] ?? 0) >= 0.5, "weak anchor \(anchor) in «\(reason.long)»")
+                #expect((output.titleWeights[anchor] ?? 0) >= Weights.default.reasonAnchorMinWeight, "weak anchor \(anchor) in «\(reason.long)»")
                 if let name = names[anchor], reason.evidence.anchorIds.count == 1 {
                     #expect(reason.long.contains(name))
                 }

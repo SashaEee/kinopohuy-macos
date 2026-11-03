@@ -45,6 +45,8 @@ public struct Weights: Codable, Sendable, Hashable {
     public var affinitySmoothing: Double = 2
     /// A liked genre, country, person, collection or list needs A(f) above this to make a title «in taste».
     public var tasteMatchMinAffinity: Double = 0.1
+    /// «Что-то новое» only offers titles this many people rated (a find, not an obscurity).
+    public var explorationMinVotes: Int = 5000
     /// Added to aff(t)'s denominator (in group-weight units): a title matching in several groups beats one lucky match.
     public var affinityTitleSmoothing: Double = 1.0
     /// aff(t) of a title known only from a card (year, country, main genre) is scaled by this.
@@ -156,7 +158,7 @@ public struct Weights: Codable, Sendable, Hashable {
 
     // §2.5 Explanations
     /// «Вы досмотрели «X»» only when X weighs at least this much.
-    public var reasonAnchorMinWeight: Double = 0.5
+    public var reasonAnchorMinWeight: Double = 0.4
     /// Contributions this close to the top one (share of it) let the template priority decide.
     public var reasonTieShare: Double = 0.1
     /// «Вам подойдёт?»: score percentiles for «Скорее да» and «Скорее нет».
@@ -225,6 +227,7 @@ public struct Weights: Codable, Sendable, Hashable {
         try d(.typicalSeasonEpisodes, &typicalSeasonEpisodes)
         try d(.affinitySmoothing, &affinitySmoothing)
         try d(.tasteMatchMinAffinity, &tasteMatchMinAffinity)
+        try i(.explorationMinVotes, &explorationMinVotes)
         try d(.affinityTitleSmoothing, &affinityTitleSmoothing)
         try d(.cardAffinityCertainty, &cardAffinityCertainty)
         try m(.groupWeights, &groupWeights)

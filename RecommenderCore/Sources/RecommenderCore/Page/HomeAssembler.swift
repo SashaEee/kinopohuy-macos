@@ -228,6 +228,10 @@ struct HomeAssembler {
     func makeHero(used: inout Set<Int>) -> HeroPick? {
         guard !isColdStart, core.settings.heroMode == .tonight, !ranked.isEmpty else { return nil }
         let context = HeroContext(context: core.context, weights: core.weights)
+        // A find, not the user's own queue (bookmarks and «Можно начать» have their row); the queue only when there's
+        // nothing else.
+        let finds = ranked.filter { (core.signal($0.title)?.intent ?? 0) <= 0 }
+        let ranked = finds.isEmpty ? self.ranked : finds
         let fitting = ranked.first { context.matches(core.titles[$0.title]) }
         guard let main = fitting ?? ranked.first else { return nil }
         let label = fitting == nil ? "Лучшее для вас сейчас" : context.label
@@ -269,11 +273,12 @@ struct HomeAssembler {
 
         // «Для вас»: what the user hasn't lined up already (their own queue is «Можно начать»).
         let discoveryTitles = discoveryCandidates(inRanked: inRanked)
-        let notQueued = rankedTitles.filter { (core.signal($0)?.intent ?? 0) <= 0 }
+        let queued: (Int) -> Bool = { (core.signal($0)?.intent ?? 0) > 0 }
+        let notQueued = rankedTitles.filter { !queued($0) }
         plans.append(RowPlan(
             id: "forYou", kind: .forYou, title: "Для вас", candidates: Array(notQueued.prefix(weights.mmrWindow)),
             diversify: true, window: weights.mmrWindow, minItems: weights.rowMinItems,
-            discoveries: discoveryTitles, order: next(),
+            discoveries: discoveryTitles.filter { !queued($0) }, order: next(),
         ))
 
         // «Потому что вы досмотрели «X»» for the top anchors.
@@ -389,7 +394,8 @@ struct HomeAssembler {
         var result: [(board: Int, members: [Int], score: Double)] = []
         for board in 0..<core.graph.boards.count where core.graph.board(board).kind == .collection {
             let members = core.graph.boardMembers[board]
-            let candidates = members.filter { inRanked.contains($0) }
+            // The user's own queue has its row («Можно начать»): collections bring new titles.
+            let candidates = members.filter { inRanked.contains($0) && (core.signal($0)?.intent ?? 0) <= 0 }
                 .sorted { (scoreOf[$0]?.score ?? 0, -$0) > (scoreOf[$1]?.score ?? 0, -$1) }
             guard !candidates.isEmpty else { continue }
             let total = candidates.reduce(0) { $0 + max(0, scoreOf[$1]?.score ?? 0) }
