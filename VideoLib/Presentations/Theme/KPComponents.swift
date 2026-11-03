@@ -320,11 +320,11 @@ struct KPHero<Art: View, Actions: View>: View {
                         .frame(width: w / 8, height: h / 8)
                         .clipped()
                         .blur(radius: 60 / 8, opaque: true)
-                        .saturation(1.2)
+                        .saturation(1.35)
                         .drawingGroup()
                         .scaleEffect(8)
                         .frame(width: w, height: h)
-                        .opacity(0.5)
+                        .opacity(0.6)
 
                     art()
                         .scaledToFill()
@@ -332,30 +332,25 @@ struct KPHero<Art: View, Actions: View>: View {
                         .scaleEffect(settled || reduceMotion ? 1 : 1.07, anchor: .center)
                         .clipped()
                         .mask {
-                            LinearGradient(stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: .black.opacity(0.7), location: 0.3),
-                                .init(color: .black, location: 0.55),
-                            ], startPoint: .leading, endPoint: .trailing)
+                            // Eased, not linear: a straight ramp shows as an edge where the picture starts.
+                            LinearGradient(stops: KP.easedStops(.black, from: 0, to: 1, start: 0, end: 0.62), startPoint: .leading, endPoint: .trailing)
                         }
                 }
                 .frame(width: w, height: h)
                 .overlay {
-                    // The left side darkens into the background behind the text.
-                    LinearGradient(stops: [
-                        .init(color: KP.bg.opacity(0.96), location: 0),
-                        .init(color: KP.bg.opacity(0.85), location: 0.28),
-                        .init(color: KP.bg.opacity(0.35), location: 0.5),
-                        .init(color: .clear, location: 0.68),
-                    ], startPoint: .leading, endPoint: .trailing)
+                    // The left side darkens into the background behind the text, holding dark under the text column
+                    // and easing out over the picture.
+                    LinearGradient(stops: [.init(color: KP.bg.opacity(0.94), location: 0)] + KP.easedStops(KP.bg, from: 0.9, to: 0, start: 0.2, end: 0.72), startPoint: .leading, endPoint: .trailing)
                 }
                 .overlay {
-                    LinearGradient(stops: [
-                        .init(color: KP.bg.opacity(0.5), location: 0),
-                        .init(color: .clear, location: 0.2),
-                        .init(color: .clear, location: 0.62),
-                        .init(color: KP.bg, location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(
+                        stops: KP.easedStops(KP.bg, from: 0.55, to: 0, start: 0, end: 0.24) + KP.easedStops(KP.bg, from: 0, to: 1, start: 0.55, end: 1),
+                        startPoint: .top, endPoint: .bottom
+                    )
+                }
+                .overlay {
+                    // A breath of grain: dark gradients on an 8-bit screen otherwise step in visible bands.
+                    KPDither()
                 }
             }
 
@@ -491,6 +486,48 @@ struct KPReasonLine: View {
     }
 }
 
+/// Fine grain over a gradient, too faint to see as texture: it breaks the 8-bit steps a dark gradient otherwise shows.
+struct KPDither: View {
+    var body: some View {
+        if let image = KP.ditherImage {
+            Image(decorative: image, scale: 2)
+                .resizable(resizingMode: .tile)
+                .opacity(0.05)
+                .blendMode(.overlay)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+extension KP {
+    /// Gradient stops from one opacity of a colour to another, eased (smoothstep) between two locations: the ramp has no
+    /// corners for the eye to catch, unlike a two-stop linear one.
+    static func easedStops(_ color: Color, from: Double, to: Double, start: Double, end: Double, steps: Int = 12) -> [Gradient.Stop] {
+        (0...steps).map { step in
+            let t = Double(step) / Double(steps)
+            let eased = t * t * (3 - 2 * t)
+            return .init(color: color.opacity(from + (to - from) * eased), location: start + (end - start) * t)
+        }
+    }
+
+    /// 128×128 of grey noise (fixed seed), made once.
+    @MainActor static let ditherImage: CGImage? = {
+        let size = 128
+        var state: UInt32 = 0x9E37_79B9
+        var pixels = [UInt8](repeating: 0, count: size * size)
+        for index in pixels.indices {
+            state = state &* 1_664_525 &+ 1_013_904_223
+            pixels[index] = UInt8(truncatingIfNeeded: state >> 24)
+        }
+        guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
+        return CGImage(
+            width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: size,
+            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+        )
+    }()
+}
+
 // MARK: - Top bar
 
 /// Logo, the sections, and what's on the right (search, settings, the account), over the top of the window on a
@@ -564,12 +601,13 @@ struct KPTopBar<Tab: Hashable & Identifiable, Trailing: View>: View {
         .background {
             // A plain gradient, not a material: a backdrop blur across the window's width would be sampled again on
             // every frame of scrolling under it.
-            LinearGradient(stops: [
-                .init(color: KP.bg.opacity(0.95), location: 0),
-                .init(color: KP.bg.opacity(0.88), location: 0.8),
-                .init(color: KP.bg.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-            .frame(height: KP.topBarHeight + 10)
+            // Solid under the bar, then a long eased fade: no line where the band ends.
+            LinearGradient(
+                stops: [.init(color: KP.bg.opacity(0.95), location: 0)]
+                    + KP.easedStops(KP.bg, from: 0.9, to: 0, start: KP.topBarHeight * 0.75 / (KP.topBarHeight + 36), end: 1),
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: KP.topBarHeight + 36)
             .frame(maxHeight: .infinity, alignment: .top)
             .allowsHitTesting(false)
         }
