@@ -38,6 +38,7 @@ enum CandidateSources {
     static func all(_ core: EngineCore) -> [SourceRanking] {
         [
             GraphSource.ranking(core),
+            ViewersSource.ranking(core),
             ContinuationSource.ranking(core),
             IntentSource.ranking(core),
             AffinitySource.ranking(core),

@@ -95,7 +95,7 @@ public struct Weights: Codable, Sendable, Hashable {
     // §4.6 Fusion
     public var rrfK: Double = 60
     public var sourcePriors: [String: Double] = [
-        "graph": 1.0, "continuation": 1.0, "intent": 0.8, "affinity": 0.7, "people": 0.6, "qualityFresh": 0.5,
+        "graph": 1.0, "viewers": 1.1, "continuation": 1.0, "intent": 0.8, "affinity": 0.7, "people": 0.6, "qualityFresh": 0.5,
         "exploration": 0.3,
     ]
     public var kpPriorVotes: Double = 3000

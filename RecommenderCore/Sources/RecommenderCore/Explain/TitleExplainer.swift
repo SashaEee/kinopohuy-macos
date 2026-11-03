@@ -53,6 +53,8 @@ enum TitleExplainer {
         switch contribution.source {
         case .graph:
             return graphSentence(evidence, core: core)
+        case .viewers:
+            return viewersSentence(evidence, core: core)
         case .continuation:
             return ReasonBuilder.continuationReason(title, evidence: evidence, core: core)?.long
         case .intent:
@@ -68,6 +70,14 @@ enum TitleExplainer {
         case .affinity:
             return tasteSentence(title, core: core)
         }
+    }
+
+    /// «Кому понравился «Мост», понравился и этот — по оценкам зрителей».
+    static func viewersSentence(_ evidence: Evidence, core: EngineCore) -> String? {
+        let names = evidence.anchorIds.prefix(2).compactMap { core.titleIndex[$0].map { core.titles[$0].name } }
+        guard let first = names.first else { return nil }
+        let liked = names.count > 1 ? "\(RussianText.quoted(first)) и \(RussianText.quoted(names[1]))" : RussianText.quoted(first)
+        return "Кому понравился \(liked), понравился и этот — по оценкам зрителей"
     }
 
     /// «Похоже на «Мост» и «Убийство» — вы их досмотрели» / «Похоже на «Мост» — вы досмотрели этот сериал».

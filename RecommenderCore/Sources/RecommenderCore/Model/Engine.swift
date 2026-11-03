@@ -91,6 +91,8 @@ public enum SourceKind: String, Codable, Sendable, Hashable, CaseIterable {
     case qualityFresh
     /// S7: something new for you.
     case exploration
+    /// S8: what viewers who liked the user's titles liked too (MovieLens, by IMDb id).
+    case viewers
 }
 
 /// Why a title is recommended: the kind decides the template (and its priority when contributions are close).
@@ -311,16 +313,21 @@ public struct EngineInput: Codable, Sendable {
     /// Seeds every random choice, so the same day and profile give the same page.
     public var seed: UInt64
 
+    /// «Those who liked X also liked Y» for pool titles (title id → neighbours in the pool, best first), from the data
+    /// pack; nil without one.
+    public var viewerNeighbours: [String: [ViewerNeighbour]]?
+
     public init(
         context: EngineContext, titles: [TitleFeatures], signals: UserSignals, settings: RecommenderSettings,
         weights: Weights = .default, seed: UInt64
-    ) {
+    , viewerNeighbours: [String: [ViewerNeighbour]]? = nil) {
         self.context = context
         self.titles = titles
         self.signals = signals
         self.settings = settings
         self.weights = weights
         self.seed = seed
+        self.viewerNeighbours = viewerNeighbours
     }
 
     /// Weights are optional in JSON (an export without them, or with a partial set, uses the defaults).
@@ -355,5 +362,16 @@ public struct EngineOutput: Codable, Sendable {
         self.profile = profile
         self.titleWeights = titleWeights
         self.isColdStart = isColdStart
+    }
+}
+
+/// A neighbour by viewers: another pool title and how strongly the same people liked both (0…1).
+public struct ViewerNeighbour: Codable, Sendable, Hashable {
+    public var titleId: String
+    public var score: Double
+
+    public init(titleId: String, score: Double) {
+        self.titleId = titleId
+        self.score = score
     }
 }

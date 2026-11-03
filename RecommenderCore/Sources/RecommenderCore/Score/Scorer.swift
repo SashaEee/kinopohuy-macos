@@ -135,7 +135,7 @@ enum Fatigue {
 }
 
 extension SourceKind {
-    /// The order sources are listed in (S1…S7), the tie-break between equal contributions.
+    /// The order sources are listed in (S1…S8), the tie-break between equal contributions.
     var listOrder: Int {
         switch self {
         case .graph: 0
@@ -145,6 +145,7 @@ extension SourceKind {
         case .people: 4
         case .qualityFresh: 5
         case .exploration: 6
+        case .viewers: 7
         }
     }
 }
