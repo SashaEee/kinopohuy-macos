@@ -1,8 +1,41 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>КиноПохуй</title>
+        <item>
+            <title>2.1.0</title>
+            <pubDate>Tue, 03 Nov 2026 22:51:42 +0300</pubDate>
+            <link>https://github.com/SashaEee/kinopohuy-macos</link>
+            <sparkle:version>101</sparkle:version>
+            <sparkle:shortVersionString>2.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## КиноПохуй 2.1.0 — рекомендации
+
+Главное в этой версии: приложение само подбирает, что посмотреть. Подбор считается на вашем Mac, никуда не отправляется и объясняет каждый свой совет.
+
+- **«Сегодня вечером».** Первые слайды заставки на главной подобраны под вас и под время: в будний вечер — что-то не длиннее двух часов, в пятницу — фильм на вечер, поздно ночью — серия. Под названием написано, почему именно это.
+- **Личные ряды:** «Для вас», «Потому что вы смотрите «…»», «Подборки для вас», «Можно начать». Один тайтл не повторяется на странице дважды, а ваши закладки живут в «Можно начать», не занимая место находок.
+- **Откуда советы.** Связи на сайте («Смотрите также», списки, подборки), любимые жанры, страны и люди, похожие по сюжету (описания сравнивает встроенная в macOS языковая модель) и то, что нравится зрителям с похожими вкусами. Фильмы, которых нет в рядах сайта, приложение находит само.
+- **«Выбери за меня» (⌘J).** Готовый вариант сразу и ещё два «Или». Можно сказать словами (⌘K): «лёгкое на полтора часа, смотрим вдвоём», «как «Мост», но покороче», «без ужасов». Кнопки «Полегче», «Покороче», «Поновее» поправят выбор, «Другое» покажет следующий.
+- **«Уточнить вкус».** Отметьте, что вам близко, оцените несколько своих фильмов одной клавишей и, если хотите, выберите, что хочется посмотреть. После каждого ответа видно, как меняются советы.
+- **Ваша оценка:** «Не моё», «Нравится», «Обожаю» на странице тайтла и правым кликом по постеру. Оценённый фильм считается просмотренным: уходит из «Продолжить просмотр» и отмечается просмотренным на сайте. Досмотренный в плеере — тоже.
+- **Оценки критиков:** Rotten Tomatoes и Metacritic на странице тайтла (из Викиданных). Строка «Вам подойдёт?» подскажет, совпадает ли тайтл с вашим вкусом.
+- **Импорт оценок** из IMDb и Letterboxd (CSV) — в Настройках → «Рекомендации».
+- **«Почему это?»** у каждого совета, с кнопками «Меньше такого» и «Не учитывать».
+- **«Досмотреть» по полочкам:** продолжить, можно начать, похоже, бросили, досмотрено. «Убрать из ряда» работает и на главной.
+- **Настройки → «Рекомендации»:** что показывать на заставке, «знакомое ↔ новое», что не советовать, сброс вкуса, экспорт.
+
+Чтобы советы были точнее, приложение в фоне читает страницы тайтлов на сайте под вашим аккаунтом — не больше 300 в день, по одной раз в несколько секунд. Сайт видит эти открытия так же, как если бы вы листали сами. Лимит меняется или выключается в Настройках → «Рекомендации».
+
+**Обновление.** Если стоит 2.0.0, приложение предложит обновиться само. Новая установка: перетащите «КиноПохуй» в «Программы»; при первом запуске — Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть».
+
+**Поддержать проект:** [Boosty](https://boosty.to/sanchella_zzz) или USDT в сети TON — адрес в README и в приложении: Настройки → «О программе» → «Поддержать проект». Спасибо!
+]]></description>
+            <enclosure url="https://github.com/SashaEee/kinopohuy-macos/releases/download/v2.1.0/KinoPohuy-2.1.0.zip" length="35784174" type="application/octet-stream" sparkle:edSignature="zEtfdlh6dR2wmiqrizNZd39dC6erbmKwqp5aISFQ8Q45O1UZFL2DxRFDUNc9790uwAEhdy1HvEq1rWo/SKLhCQ=="/>
+        </item>
         <item>
             <title>2.0.0</title>
             <pubDate>Fri, 30 Oct 2026 21:35:06 +0300</pubDate>
@@ -26,10 +59,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
 
 **Поддержать проект:** [Boosty](https://boosty.to/sanchella_zzz) или USDT в сети TON — адрес в README и в приложении: Настройки → «О программе» → «Поддержать проект». Спасибо!
 ]]></description>
-            <enclosure url="https://github.com/SashaEee/kinopohuy-macos/releases/download/v2.0.0/KinoPohuy-2.0.0.zip" length="24693331" type="application/octet-stream" sparkle:edSignature="H4idU++xC258b7h7KwRfEwiUELXbwn4VZz2hwRAZBqK+EQsXGat5fpHWO6E86Yx7YmnVdTak6rMoYtPtMsEKCg=="></enclosure>
+            <enclosure url="https://github.com/SashaEee/kinopohuy-macos/releases/download/v2.0.0/KinoPohuy-2.0.0.zip" length="24693331" type="application/octet-stream" sparkle:edSignature="H4idU++xC258b7h7KwRfEwiUELXbwn4VZz2hwRAZBqK+EQsXGat5fpHWO6E86Yx7YmnVdTak6rMoYtPtMsEKCg=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: ++ELEwIbI0M2JBlLPg3d0TqcIAyxNYrOD7jN4yn5okWbErhcj+oBNljYL+wth9LykwQYeF20DGvgpzIYJKO7DQ==
-length: 3001
+</rss>
+<!-- sparkle-signatures:
+edSignature: jDZ2dhVcnjmWgyKzFCDzO2gQZU8LLbzsLpAui3pml2Vdt58B7UwJKCjU/6w32+SqGR2b8mKSryh2p1G++3EaBw==
+length: 8776
 -->
