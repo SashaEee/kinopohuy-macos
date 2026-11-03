@@ -284,7 +284,7 @@ struct KPHero<Art: View, Actions: View>: View {
     var ratings: [(source: String, value: String)] = []
     var description: String?
     var descriptionLines = 3
-    /// Why it's shown («Потому что вы досмотрели «Мост»»), a line in the sun's colour under the name.
+    /// Why it's shown («Потому что вы смотрите «Мост»»): a glass chip under the facts.
     var reason: String?
     /// A title's page: the taller banner of the two (`height` overrides both).
     var details = false
@@ -390,16 +390,6 @@ struct KPHero<Art: View, Actions: View>: View {
                         }
                     }
                 }
-                if let reason, !reason.isEmpty {
-                    Label {
-                        Text(verbatim: reason)
-                    } icon: {
-                        Image(systemName: "sparkles")
-                    }
-                    .font(KP.font(metrics.facts + 0.5, .semibold))
-                    .foregroundStyle(KP.sun)
-                    .lineLimit(1)
-                }
                 // Each late slot is a ZStack: the stand-in and the real line overlap while they cross-fade, instead
                 // of stacking up for a moment and pushing the title.
                 if isPlaceholder || !facts.isEmpty || !ratings.isEmpty {
@@ -426,6 +416,10 @@ struct KPHero<Art: View, Actions: View>: View {
                             .transition(.opacity)
                         }
                     }
+                }
+                if let reason, !reason.isEmpty, !isPlaceholder {
+                    KPReasonChip(text: reason)
+                        .transition(.opacity)
                 }
                 if isPlaceholder || description?.isEmpty == false {
                     ZStack(alignment: .topLeading) {
@@ -473,6 +467,39 @@ struct KPHero<Art: View, Actions: View>: View {
                 withAnimation(.smooth(duration: 0.6)) { entered = true }
             }
         }
+    }
+}
+
+/// Why a title is shown, over a picture: a frosted capsule with a thin light edge, a spark in the sun's gradient, the
+/// reason in white. Quiet enough not to compete with the title, clear enough to read over any poster.
+struct KPReasonChip: View {
+    let text: String
+
+    @Environment(\.kpMetrics) private var metrics
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "sparkles")
+                .font(.system(size: metrics.facts - 1, weight: .semibold))
+                .foregroundStyle(KP.sunGradient)
+            Text(verbatim: text)
+                .font(KP.font(metrics.facts - 0.5, .semibold))
+                .foregroundStyle(KP.fg.opacity(0.92))
+                .lineLimit(1)
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 13)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .background(Capsule().fill(Color.black.opacity(0.18)))
+        .overlay(
+            Capsule().strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.06)], startPoint: .top, endPoint: .bottom),
+                lineWidth: 1
+            )
+        )
+        .environment(\.colorScheme, .dark)
+        .fixedSize()
     }
 }
 

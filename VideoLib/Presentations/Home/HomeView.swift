@@ -4,7 +4,7 @@ import Kingfisher
 import RecommenderCore
 import SwiftUI
 
-/// «Сегодня вечером» (the recommender's pick for now, with two «Или:») or the trends banner under the top bar; when
+/// The banner under the top bar, turning every 10 s: the recommender's picks for tonight first, then the trends; when
 /// signed in «Продолжить просмотр» (a click goes on watching) and «Новые серии»; then the personal rows («Для вас»,
 /// «Потому что вы досмотрели «…»», …); then the site's rows, each scrolling sideways, more loading as the last one comes
 /// into view.
@@ -17,9 +17,6 @@ struct HomeView: View {
     @State private var whyPresented = false
     @State private var tastePresented = false
     @Default(.recHeroMode) private var heroMode
-
-    /// The banner is the recommender's pick, not the trends.
-    private var showsTonight: Bool { heroMode == HeroMode.tonight.rawValue && store.tonight != nil }
 
     /// The banner's picture decoded at about its drawn size (see `hero`).
     static let heroPixels = CGSize(width: 1400, height: 2100)
@@ -126,8 +123,11 @@ struct HomeView: View {
         .scrollIndicators(.automatic)
         .kpReportsScrolling()
         // The banner turns only while it's on screen and the window is in front.
-        .onChange(of: heroOnScreen && appearsActive && !showsTonight, initial: true) { _, visible in
+        .onChange(of: heroOnScreen && appearsActive, initial: true) { _, visible in
             store.send(.heroVisible(visible))
+        }
+        .onChange(of: heroMode) {
+            store.send(.heroModeChanged, animation: .easeInOut(duration: 0.4))
         }
         .ignoresSafeArea(edges: .top)
         .overlay {
@@ -160,119 +160,40 @@ struct HomeView: View {
         name.count > 40 ? name.prefix(38).trimmingCharacters(in: .whitespaces) + "…" : name
     }
 
-    /// What's under the top bar: «Сегодня вечером», the trends, or nothing (Settings → «Рекомендации»).
+    /// What's under the top bar: the banner, or nothing (Settings → «Рекомендации» → «Скрыть»).
     @ViewBuilder
     private var banner: some View {
         if heroMode == HeroMode.hidden.rawValue {
             Color.clear.frame(height: KP.topBarHeight)
-        } else if showsTonight, let tonight = store.tonight {
-            tonightHero(tonight)
         } else {
             hero
         }
     }
 
-    /// «Сегодня вечером»: the pick for now, lower than the trends banner so «Продолжить просмотр» shows without scrolling
-    /// on a 13" screen. The «…» has «Не сегодня», «Не моё», «Уже смотрел» (the next «Или:» takes its place) and «Почему
-    /// это?»; the dice opens «Выбери за меня».
-    private func tonightHero(_ tonight: HomeFeature.Tonight) -> some View {
-        let title = tonight.main.title
-        let details = tonight.details
-        let simple = title.simple
-
-        return KPHero(
-            kicker: tonight.label.isEmpty ? "Сегодня вечером" : "Сегодня вечером · \(tonight.label)",
-            title: details?.nameRussian ?? title.name,
-            original: details?.nameOriginal ?? title.originalName,
-            facts: details?.heroFacts ?? title.recFacts,
-            ratings: details?.heroRatings ?? title.recRatings,
-            description: details?.description ?? title.synopsis,
-            descriptionLines: 2,
-            reason: tonight.main.rec.reason.long,
-            height: (metrics.compact ? 360 : 400) + KP.topBarHeight
-        ) {
-            KPRemoteImage(url: details?.hposter ?? title.poster, fallback: title.poster, downsample: Self.heroPixels, fallbackDownsample: KP.cardPosterPixels())
-        } actions: {
-            Button {
-                store.send(.recOpened(tonight.main.id))
-                store.send(.delegate(.push(.watch(simple))))
-            } label: {
-                Label("Смотреть", systemImage: "play.fill")
-            }
-            .buttonStyle(KPPrimaryButtonStyle())
-
-            Button {
-                store.send(.recOpened(tonight.main.id))
-                store.send(.delegate(.push(.details(simple))))
-            } label: {
-                Label("Подробнее", systemImage: "info.circle")
-            }
-            .buttonStyle(KPSecondaryButtonStyle())
-
-            Button {
-                store.send(.pickForMeTapped)
-            } label: {
-                Image(systemName: "dice")
-            }
-            .buttonStyle(KPIconButtonStyle())
-            .help("Выбери за меня (⌘J)")
-
-            Menu {
-                Button("Почему это?") { whyPresented = true }
-                Divider()
-                Button("Не сегодня") { store.send(.tonightFeedback(.notToday), animation: .smooth(duration: 0.4)) }
-                Button("Не моё") { store.send(.tonightFeedback(.notMe), animation: .smooth(duration: 0.4)) }
-                Button("Уже смотрел") { store.send(.tonightFeedback(.seen), animation: .smooth(duration: 0.4)) }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: metrics.control * 0.36, weight: .bold))
-                    .foregroundStyle(KP.fg80)
-                    .frame(width: metrics.control, height: metrics.control)
-                    .background(Circle().fill(KP.chip))
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("Почему это, не сегодня, не моё")
-            .popover(isPresented: $whyPresented, arrowEdge: .bottom) {
-                WhyThisView(titleId: tonight.main.id, name: title.name) {
-                    whyPresented = false
-                }
-            }
-        }
-        .id(tonight.main.id)
-        .transition(.opacity)
-        .overlay(alignment: .bottomTrailing) {
-            if !tonight.alternatives.isEmpty {
-                TonightAlternatives(items: tonight.alternatives) { id in
-                    store.send(.tonightPromote(id), animation: .easeInOut(duration: 0.5))
-                }
-                .padding(.trailing, KP.gutter)
-                .padding(.bottom, metrics.heroBottom)
-            }
-        }
-    }
-
+    /// One slide at a time: a pick for tonight (with why, in a glass chip, and a «…» for «Почему это?», «Не сегодня»,
+    /// «Не моё», «Уже смотрел») or a trend. The dots at the right show how many and fill as each one's 10 s run out.
     @ViewBuilder
     private var hero: some View {
-        if store.hero.indices.contains(store.heroIndex) {
-            let movie = store.hero[store.heroIndex]
+        if store.slides.indices.contains(store.heroIndex) {
+            let slide = store.slides[store.heroIndex]
+            let movie = slide.details
             let simple = MovieSimple(movieId: movie.movieId, name: movie.nameRussian, poster: movie.poster)
 
             KPHero(
-                kicker: "Сейчас в тренде",
+                kicker: slide.kicker,
                 title: movie.nameRussian,
                 original: movie.nameOriginal,
                 facts: movie.heroFacts,
                 ratings: movie.heroRatings,
-                description: movie.description
+                description: movie.description,
+                reason: slide.reason
             ) {
                 // Decoded at about the size it's drawn (the sharp side is at most ~620 pt wide, 2×), its card-sized copy
                 // (already in memory from the first row) showing until then.
                 KPRemoteImage(url: movie.hposter, fallback: movie.poster, downsample: Self.heroPixels, fallbackDownsample: KP.cardPosterPixels())
             } actions: {
                 Button {
+                    if let id = slide.recId { store.send(.recOpened(id)) }
                     store.send(.delegate(.push(.watch(simple))))
                 } label: {
                     Label("Смотреть", systemImage: "play.fill")
@@ -280,27 +201,32 @@ struct HomeView: View {
                 .buttonStyle(KPPrimaryButtonStyle())
 
                 Button {
+                    if let id = slide.recId { store.send(.recOpened(id)) }
                     store.send(.delegate(.push(.details(simple))))
                 } label: {
                     Label("Подробнее", systemImage: "info.circle")
                 }
                 .buttonStyle(KPSecondaryButtonStyle())
+
+                if let id = slide.recId {
+                    pickMenu(id: id, name: movie.nameRussian)
+                }
             }
             .id(movie.movieId)
             .transition(.opacity)
             .onHover { store.send(.heroHeld($0)) }
             .overlay(alignment: .bottomTrailing) {
-                if store.hero.count > 1 {
-                    HeroDots(count: store.hero.count, index: store.heroIndex, held: store.heroHeld) { index in
+                if store.slides.count > 1 {
+                    HeroDots(count: store.slides.count, index: store.heroIndex, held: store.heroHeld) { index in
                         store.send(.heroSelected(index), animation: .easeInOut(duration: 0.5))
                     }
                     .padding(.trailing, KP.gutter)
                     .padding(.bottom, metrics.heroBottom + 8) // level with the buttons' row
                 }
             }
-            .task(id: store.hero.map(\.movieId)) {
+            .task(id: store.slides.map(\.id)) {
                 // The other banners' pictures are fetched ahead, so a change is a crossfade, not a blank.
-                ImagePrefetcher(urls: store.hero.compactMap { URL(string: $0.hposter) }, options: [.processor(DownsamplingImageProcessor(size: Self.heroPixels))]).start()
+                ImagePrefetcher(urls: store.slides.compactMap { URL(string: $0.details.hposter) }, options: [.processor(DownsamplingImageProcessor(size: Self.heroPixels))]).start()
             }
         } else if store.heroFailed || store.categories.error != nil {
             // No banner: the rows start under the top bar.
@@ -309,6 +235,34 @@ struct HomeView: View {
             // The first titles' pages are still coming: the banner's space, so the rows don't jump.
             KPLoadingView()
                 .frame(height: metrics.heroHome)
+        }
+    }
+
+    /// A pick's «…»: why it's here, and the three ways to say it isn't for tonight (its slide goes at once).
+    private func pickMenu(id: String, name: String) -> some View {
+        Menu {
+            Button("Почему это?") { whyPresented = true }
+            Divider()
+            Button("Не сегодня") { store.send(.tonightFeedback(id, .notToday), animation: .easeInOut(duration: 0.5)) }
+            Button("Не моё") { store.send(.tonightFeedback(id, .notMe), animation: .easeInOut(duration: 0.5)) }
+            Button("Уже смотрел") { store.send(.tonightFeedback(id, .seen), animation: .easeInOut(duration: 0.5)) }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: metrics.control * 0.36, weight: .bold))
+                .foregroundStyle(KP.fg80)
+                .frame(width: metrics.control, height: metrics.control)
+                .background(Circle().fill(KP.chip))
+                .contentShape(Circle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Почему это, не сегодня, не моё")
+        .popover(isPresented: $whyPresented, arrowEdge: .bottom) {
+            WhyThisView(titleId: id, name: name) {
+                whyPresented = false
+            }
         }
     }
 }
@@ -383,64 +337,6 @@ private struct HeroDots: View {
             guard !Task.isCancelled else { return }
             withAnimation(.linear(duration: 9.97)) { progress = 1 }
         }
-    }
-}
-
-/// «Или:» on the «Сегодня вечером» banner: two small posters with their reason; a click puts one in the banner.
-private struct TonightAlternatives: View {
-    let items: [RecItem]
-    let promote: (String) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(verbatim: "ИЛИ")
-                .font(KP.font(11, .bold))
-                .tracking(1.4)
-                .foregroundStyle(KP.fg55)
-            HStack(spacing: 12) {
-                ForEach(items.prefix(2)) { item in
-                    TonightAlternative(item: item) { promote(item.id) }
-                }
-            }
-        }
-        .padding(12)
-        .background(.ultraThinMaterial.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .background(KP.bg.opacity(0.35), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .environment(\.colorScheme, .dark)
-    }
-}
-
-private struct TonightAlternative: View {
-    let item: RecItem
-    let action: () -> Void
-
-    @State private var hover = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 10) {
-                KPRemoteImage(url: item.title.poster, downsample: KP.cardPosterPixels())
-                    .frame(width: 56, height: 84)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(KP.fg, lineWidth: 2).padding(-3).opacity(hover ? 1 : 0))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: item.title.name)
-                        .font(KP.font(13, .semibold))
-                        .foregroundStyle(KP.fg)
-                        .lineLimit(2)
-                    Text(verbatim: item.rec.reason.short.isEmpty ? (item.title.cardSubtitle ?? "") : item.rec.reason.short)
-                        .font(KP.font(11.5, .medium))
-                        .foregroundStyle(KP.fg55)
-                        .lineLimit(2)
-                }
-                .frame(width: 128, alignment: .leading)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.15), value: hover)
-        .help(item.rec.reason.long.isEmpty ? "Поставить в баннер" : item.rec.reason.long)
     }
 }
 

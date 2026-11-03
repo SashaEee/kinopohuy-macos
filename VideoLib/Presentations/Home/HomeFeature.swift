@@ -22,6 +22,9 @@ struct HomeFeature {
         var heroHeld = false
         /// The banner is scrolled away or the window isn't in front: it doesn't turn (nobody sees it).
         var heroHidden = false
+        /// What the banner turns through: the recommender's picks for tonight first (once their pages are in), then the
+        /// trends.
+        var slides: [HeroSlide] = []
 
         /// «Продолжить просмотр», first on Home when signed in (the site's continue list, unwatched first).
         var continueWatching: [MovieWatchLater] = []
@@ -40,6 +43,8 @@ struct HomeFeature {
 
         @Presents var alert: AlertState<Action.Alert>?
 
+        /// The pages of tonight's picks (large poster, description), by title id.
+        fileprivate var tonightDetails: [String: MovieDetailed] = [:]
         /// When the rows shown were built: a newer build the same day is merged in place (a card gone after «Не моё»
         /// is filled from the same row), so the page never reshuffles under the pointer.
         fileprivate var recsBuiltAt: Date?
@@ -75,13 +80,24 @@ struct HomeFeature {
         var simple: MovieSimple { MovieSimple(movieId: movieId, name: name, poster: poster) }
     }
 
-    /// «Сегодня вечером»: the main pick, two «Или:», and the main one's page once it came (large poster, description).
+    /// «Сегодня вечером»: the main pick and two more, each a slide of the banner once its page is in.
     struct Tonight: Equatable {
         var main: RecItem
         var alternatives: [RecItem]
         /// «Будний вечер», «Поздно — на одну серию».
         var label: String
-        var details: MovieDetailed?
+    }
+
+    /// A banner slide: a title's page, what it is to the user («Сегодня вечером», «Сейчас в тренде») and, for a
+    /// recommendation, why.
+    struct HeroSlide: Equatable, Identifiable {
+        let details: MovieDetailed
+        let kicker: String
+        var reason: String?
+        /// The recommendation's title id (its «…»: «Почему это?», «Не сегодня», «Не моё»); nil for the trends.
+        var recId: String?
+
+        var id: String { details.movieId }
     }
 
     /// What the banner's «…» does with its pick.
@@ -117,8 +133,9 @@ struct HomeFeature {
         case recStatusLoaded(RecStatus)
         case recOpened(String)
         case tonightDetailsLoaded(String, MovieDetailed)
-        case tonightPromote(String)
-        case tonightFeedback(TonightFeedback)
+        case tonightFeedback(String, TonightFeedback)
+        /// Settings → «Рекомендации» → what the banner shows.
+        case heroModeChanged
         case pickForMeTapped
         case switchWatched(MovieWatchLater)
         case watchedSwitched(MovieWatchLater, Result<Bool, any Error>)
@@ -188,6 +205,7 @@ struct HomeFeature {
                 state.paginationState = .idle
                 state.nextPage = Categories.allCases.first
                 state.hero = []
+                state.slides = []
                 state.heroIndex = 0
                 state.heroFailed = false
                 // The personal rows are asked for afresh (signed out: they go).
@@ -243,9 +261,11 @@ struct HomeFeature {
             case let .heroLoaded(hero):
                 state.hero = hero
                 state.heroFailed = hero.isEmpty
-                if state.heroIndex >= hero.count { state.heroIndex = 0 }
 
-                return hero.count > 1 ? heroTimer() : .cancel(id: CancelID.heroTimer)
+                return rebuildSlides(&state)
+
+            case .heroModeChanged:
+                return rebuildSlides(&state)
 
             case let .heroHeld(held):
                 guard held != state.heroHeld else { return .none }
@@ -253,7 +273,7 @@ struct HomeFeature {
                 state.heroHeld = held
 
                 // Paused under the pointer; when it leaves, the banner gets a fresh 10 s (the dot shows them run out).
-                return held || state.heroHidden || state.hero.count < 2 ? .cancel(id: CancelID.heroTimer) : heroTimer()
+                return held || state.heroHidden || state.slides.count < 2 ? .cancel(id: CancelID.heroTimer) : heroTimer()
 
             case let .heroVisible(visible):
                 guard visible == state.heroHidden else { return .none }
@@ -261,17 +281,17 @@ struct HomeFeature {
                 state.heroHidden = !visible
 
                 // Turning a banner nobody sees would rebuild Home every 10 s while scrolling the rows below.
-                return !visible || state.heroHeld || state.hero.count < 2 ? .cancel(id: CancelID.heroTimer) : heroTimer()
+                return !visible || state.heroHeld || state.slides.count < 2 ? .cancel(id: CancelID.heroTimer) : heroTimer()
 
             case .heroTick:
-                guard !state.hero.isEmpty, !state.heroHeld, !state.heroHidden else { return .none }
+                guard !state.slides.isEmpty, !state.heroHeld, !state.heroHidden else { return .none }
 
-                state.heroIndex = (state.heroIndex + 1) % state.hero.count
+                state.heroIndex = (state.heroIndex + 1) % state.slides.count
 
                 return .none
 
             case let .heroSelected(index):
-                guard state.hero.indices.contains(index) else { return .none }
+                guard state.slides.indices.contains(index) else { return .none }
 
                 state.heroIndex = index
 
@@ -385,45 +405,33 @@ struct HomeFeature {
                 return .run { _ in await recommender.markOpened(titleId) }
 
             case let .tonightDetailsLoaded(titleId, details):
-                guard state.tonight?.main.id == titleId else { return .none }
+                state.tonightDetails[titleId] = details
 
-                state.tonight?.details = details
+                return rebuildSlides(&state)
 
-                return .none
-
-            case let .tonightPromote(titleId):
-                // An «Или:» clicked: it takes the banner, the one it replaced takes its place among the «Или:».
-                guard var tonight = state.tonight, let index = tonight.alternatives.firstIndex(where: { $0.id == titleId }) else { return .none }
-
-                let alternative = tonight.alternatives[index]
-                tonight.alternatives[index] = tonight.main
-                tonight.main = alternative
-                tonight.details = nil
-                state.tonight = tonight
-
-                return loadTonightDetails(alternative)
-
-            case let .tonightFeedback(feedback):
+            case let .tonightFeedback(titleId, feedback):
                 guard var tonight = state.tonight else { return .none }
 
-                let id = tonight.main.id
                 let signal: Effect<Action> = switch feedback {
-                case .notToday: .run { _ in await recommender.feedback(id, .notToday) }
-                case .notMe: .run { _ in await recommender.rate(id, -2, .app) }
-                case .seen: .run { _ in await recommender.feedback(id, .seen) }
+                case .notToday: .run { _ in await recommender.feedback(titleId, .notToday) }
+                case .notMe: .run { _ in await recommender.rate(titleId, -2, .app) }
+                case .seen: .run { _ in await recommender.feedback(titleId, .seen) }
                 }
 
-                // The next «Или:» takes the banner on the spot; with none left, the trends banner comes back.
-                guard !tonight.alternatives.isEmpty else {
-                    state.tonight = nil
-                    return signal
+                // Its slide goes at once; the next pick in line leads.
+                if tonight.main.id == titleId {
+                    if tonight.alternatives.isEmpty {
+                        state.tonight = nil
+                    } else {
+                        tonight.main = tonight.alternatives.removeFirst()
+                        state.tonight = tonight
+                    }
+                } else {
+                    tonight.alternatives.removeAll { $0.id == titleId }
+                    state.tonight = tonight
                 }
 
-                tonight.main = tonight.alternatives.removeFirst()
-                tonight.details = nil
-                state.tonight = tonight
-
-                return .merge(signal, loadTonightDetails(tonight.main))
+                return .merge(signal, rebuildSlides(&state))
 
             case .pickForMeTapped:
                 return .send(.delegate(.pickForMe))
@@ -500,11 +508,12 @@ struct HomeFeature {
                 state.tonight = current
             } else if state.tonight?.main.id != main.id {
                 state.tonight = Tonight(main: main, alternatives: hero.alternatives.compactMap { Self.item($0, snapshot) }, label: hero.contextLabel)
-                effects.append(loadTonightDetails(main))
             }
         } else {
             state.tonight = nil
         }
+        effects.append(loadTonightDetails(state))
+        effects.append(rebuildSlides(&state))
 
         if state.impressionsPending {
             state.impressionsPending = false
@@ -527,14 +536,56 @@ struct HomeFeature {
         }
     }
 
-    /// The banner's large poster and description: from the main pick's page (one request, as the trends banner does).
-    private func loadTonightDetails(_ item: RecItem) -> Effect<Action> {
-        .run { send in
-            guard let details = try? await getMovieDetailsUseCase(movieId: item.title.path) else { return }
+    /// The picks' pages (large poster, description), one at a time, as the trends banner does: each becomes a slide as
+    /// it comes.
+    private func loadTonightDetails(_ state: State) -> Effect<Action> {
+        let picks = state.tonight.map { [$0.main] + $0.alternatives } ?? []
+        let missing = picks.filter { state.tonightDetails[$0.id] == nil }
+        guard !missing.isEmpty else { return .none }
 
-            await send(.tonightDetailsLoaded(item.id, details), animation: .easeInOut(duration: 0.4))
+        return .run { send in
+            for item in missing {
+                guard let details = try? await getMovieDetailsUseCase(movieId: item.title.path) else { continue }
+
+                await send(.tonightDetailsLoaded(item.id, details), animation: .easeInOut(duration: 0.4))
+            }
         }
         .cancellable(id: CancelID.tonight, cancelInFlight: true)
+    }
+
+    /// The banner's slides as things are now: tonight's picks first («Сегодня вечером», then «Подобрано для вас»), the
+    /// trends after them. The slide on screen stays on screen while it's still there; when the picks first arrive,
+    /// they lead.
+    private func rebuildSlides(_ state: inout State) -> Effect<Action> {
+        let mode = HeroMode(rawValue: Defaults[.recHeroMode]) ?? .tonight
+        var slides: [HeroSlide] = []
+        if mode == .tonight, let tonight = state.tonight {
+            for (offset, item) in ([tonight.main] + tonight.alternatives).enumerated() {
+                guard let details = state.tonightDetails[item.id] else { continue }
+                slides.append(HeroSlide(
+                    details: details, kicker: offset == 0 ? "Сегодня вечером" : "Подобрано для вас",
+                    reason: item.rec.reason.long, recId: item.id
+                ))
+            }
+        }
+        if mode != .hidden {
+            for movie in state.hero where slides.count <= Self.heroCount && !slides.contains(where: { $0.id == movie.movieId }) {
+                slides.append(HeroSlide(details: movie, kicker: "Сейчас в тренде"))
+            }
+        }
+
+        let current = state.slides.indices.contains(state.heroIndex) ? state.slides[state.heroIndex].id : nil
+        let picksArrived = !state.slides.contains { $0.recId != nil } && slides.first?.recId != nil
+        state.slides = slides
+        if picksArrived {
+            state.heroIndex = 0
+        } else if let current, let index = slides.firstIndex(where: { $0.id == current }) {
+            state.heroIndex = index
+        } else {
+            state.heroIndex = min(state.heroIndex, max(0, slides.count - 1))
+        }
+
+        return slides.count > 1 && !state.heroHeld && !state.heroHidden ? heroTimer() : .cancel(id: CancelID.heroTimer)
     }
 
     private static func item(_ recommendation: Recommendation, _ snapshot: RecSnapshot) -> RecItem? {

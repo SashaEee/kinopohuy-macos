@@ -13,7 +13,7 @@ struct PickForMeView: View {
     @FocusState private var sheetFocused: Bool
 
     var body: some View {
-        KPSheet(title: "Что хочется сегодня?", subtitle: subtitle, symbol: "dice", width: 760) {
+        KPSheet(title: "Что хочется сегодня?", subtitle: subtitle, symbol: "die.face.5", width: 760) {
             VStack(alignment: .leading, spacing: 14) {
                 field
                 if !store.turns.isEmpty || store.note != nil {

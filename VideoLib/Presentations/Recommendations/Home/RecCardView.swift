@@ -81,8 +81,8 @@ struct RecRowModel: Equatable, Identifiable {
     var items: [RecItem]
 }
 
-/// A recommended title on Home: the poster with the reason along its bottom («Похоже на «Мост»»), the name and the
-/// year under it; the reason in full under the pointer. Opening it goes through `onOpen` (the recommender learns an
+/// A recommended title on Home: a clean poster, the name and the reason under it («Похоже на «Мост»»); the reason in
+/// full under the pointer. Opening it goes through `onOpen` (the recommender learns an
 /// opened card isn't one to tire of).
 struct RecCardView: View {
     let item: RecItem
@@ -96,12 +96,12 @@ struct RecCardView: View {
             onOpen()
             navigate(.details(item.title.simple))
         } label: {
+            // A clean poster, as in the site's rows; the reason is the line under the name, where the year usually is.
             KPPosterCard(
                 title: item.title.name,
-                subtitle: item.title.cardSubtitle,
+                subtitle: item.rec.reason.short.isEmpty ? item.title.cardSubtitle : item.rec.reason.short,
                 rating: item.title.cornerRating.map(KP.ratingText),
                 ratingColor: item.title.cornerRating.map(KP.ratingColor) ?? .black.opacity(0.62),
-                note: item.rec.reason.short.isEmpty ? nil : item.rec.reason.short,
                 width: width
             ) {
                 KPRemoteImage(url: item.title.poster, downsample: KP.cardPosterPixels())

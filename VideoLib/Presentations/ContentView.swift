@@ -117,7 +117,7 @@ struct ContentView: View {
         Button {
             store.send(.pickForMeTapped(focusText: false))
         } label: {
-            Image(systemName: "dice")
+            Image(systemName: "die.face.5")
         }
         .buttonStyle(KPIconButtonStyle(diameter: 28, filled: false))
         .help("Выбери за меня (⌘J)")
