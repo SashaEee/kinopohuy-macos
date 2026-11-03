@@ -9,8 +9,10 @@
 // Usage (from anywhere): DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift scripts/readme/make-media.swift [captures]
 //
 // The captures folder holds window shots without a shadow (`screencapture -o -l<window id>`) of a Debug build run with
-// KP_DEMO=1 (screenshot mode, see KPDemo.swift): home.png, title.png, pause.png and player.png. They stay out of the
-// repository; only the framed JPEGs are committed.
+// KP_DEMO=1 (screenshot mode, see KPDemo.swift): home.png, title.png, pause.png, player.png, and for the
+// recommendations rows.png (KP_SCROLL), pick.png (KP_PICK), taste.png and deck.png (KP_TASTE, KP_TASTE=stack) and
+// fit.png (KP_OPEN, KP_SCROLL). A sheet is a window of its own: those three are the main window's place on screen
+// (`screencapture -R`) with the app in front. They stay out of the repository; only the framed JPEGs are committed.
 
 import AppKit
 import CoreImage.CIFilterBuiltins
@@ -182,10 +184,14 @@ if let match = appLinks.firstMatch(of: #/cryptoUSDT = "([^"]+)"/#) {
 }
 
 // The screenshots: each capture centred on a 2400×1480 board in the app's black, a soft shadow under the window and
-// the sun's warm glow from the top left, as on the social preview. JPEG, so four of them stay under a few megabytes.
+// the sun's warm glow from the top left, as on the social preview. JPEG, so they stay under a megabyte each.
 if CommandLine.arguments.count > 1 {
     let captures = URL(fileURLWithPath: CommandLine.arguments[1])
-    let shots = ["home": "screen-home.jpg", "title": "screen-title.jpg", "pause": "screen-pause.jpg", "player": "screen-player.jpg"]
+    let shots = [
+        "home": "screen-home.jpg", "title": "screen-title.jpg", "pause": "screen-pause.jpg", "player": "screen-player.jpg",
+        "rows": "screen-rows.jpg", "pick": "screen-pick.jpg", "taste": "screen-taste.jpg", "deck": "screen-deck.jpg",
+        "fit": "screen-fit.jpg",
+    ]
 
     for (source, name) in shots.sorted(by: { $0.key < $1.key }) {
         guard let image = NSImage(contentsOf: captures.appending(path: "\(source).png")),
@@ -211,8 +217,19 @@ if CommandLine.arguments.count > 1 {
             let size = CGSize(width: CGFloat(window.width) * fit, height: CGFloat(window.height) * fit)
             let frame = CGRect(x: ((width - size.width) / 2).rounded(), y: ((height - size.height) / 2).rounded(), width: size.width, height: size.height)
 
+            // Rounded like the window: a capture of its place on screen (a sheet over it) leaves no desktop in the corners.
+            let corner = 32 * fit
+            let rounded = CGPath(roundedRect: frame, cornerWidth: corner, cornerHeight: corner, transform: nil)
             ctx.saveGState()
             ctx.setShadow(offset: CGSize(width: 0, height: 28), blur: 90, color: CGColor(gray: 0, alpha: 0.75))
+            ctx.addPath(rounded)
+            ctx.setFillColor(bg)
+            ctx.fillPath()
+            ctx.restoreGState()
+
+            ctx.saveGState()
+            ctx.addPath(rounded)
+            ctx.clip()
             // The context is flipped for text; an image drawn as is would come out upside down.
             ctx.translateBy(x: frame.minX, y: frame.maxY)
             ctx.scaleBy(x: 1, y: -1)

@@ -29,7 +29,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/media/screen-home.jpg" width="100%" alt="Главная КиноПохуй: большая заставка с фильмом из трендов и ряд «Продолжить просмотр» с постерами и номерами серий">
+  <img src="docs/media/screen-home.jpg" width="100%" alt="Главная КиноПохуй: заставка «Сегодня вечером» с подобранным сериалом «Яга: Охота на ведьм» и причиной «Похоже на «Черное зеркало» и «Полураспад»», ниже ряд «Продолжить просмотр» с постерами и номерами серий">
 </p>
 
 ## Что это
@@ -43,6 +43,27 @@
 - **Ни телеметрии, ни трекеров.** Открытый код. Приложение можно собрать самому одной командой.
 
 ## Как это выглядит
+
+<p align="center">
+  <img src="docs/media/screen-rows.jpg" width="100%" alt="Личные ряды на главной: «Для вас» с подписями под постерами вроде «Похоже на «Из машины»» и «Ваше: драма · США», ниже «Потому что вы обожаете «1917»» и «Потому что вы обожаете «Из машины»»">
+  <br><sub><b>Личные ряды</b> <sup>с версии 2.1</sup>. «Для вас» и «Потому что вы обожаете «…»»: под каждым постером написано, почему он здесь.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/screen-pick.jpg" width="100%" alt="Окно «Выбери за меня»: поле «Например: лёгкое на полтора часа, смотрим вдвоём», понятое условие «до 90 мин», готовый вариант с причиной и кнопкой «Смотреть», два варианта «Или» и кнопки «Полегче», «Помрачнее», «Покороче», «Поновее»">
+  <br><sub><b>«Выбери за меня»</b> (<kbd>⌘</kbd> <kbd>J</kbd>) <sup>с версии 2.1</sup>. Готовый вариант сразу, ещё два «Или», а пожелания можно сказать словами.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/screen-taste.jpg" width="49%" alt="«Уточнить вкус», шаг «Что вам близко?»: жанры и страны пузырями, отмеченные галочкой — то, что приложение поняло по просмотрам">
+  <img src="docs/media/screen-deck.jpg" width="49%" alt="«Уточнить вкус», оценка своих тайтлов: постер «Метод», кнопки «Не моё», «Нравится», «Обожаю» с клавишами 1, 2, 3, шкала «Вкус изучен на 94 %» и ряд «Сейчас мы бы посоветовали»">
+  <br><sub><b>«Уточнить вкус»</b> <sup>с версии 2.1</sup>. Что вам близко, потом свои же тайтлы одной клавишей. Внизу видно, как от каждого ответа меняются советы.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/screen-fit.jpg" width="100%" alt="Страница фильма «Прибытие», блок «О фильме»: «Ваша оценка» с кнопками «Не моё», «Нравится», «Обожаю», строка «Вам подойдёт?» с ответом «Скорее зайдёт: фантастика — в вашем вкусе, Дени Вильнёв: вы смотрели 2 работы» и оценки IMDb, Кинопоиска, Rotten Tomatoes и Metacritic">
+  <br><sub><b>Оценки и «Вам подойдёт?»</b> <sup>с версии 2.1</sup>. Rotten Tomatoes и Metacritic рядом с IMDb и Кинопоиском, ответ своими словами и ваша оценка в один клик.</sub>
+</p>
 
 <p align="center">
   <img src="docs/media/screen-title.jpg" width="100%" alt="Страница сериала «Сёгун»: обложка, рейтинги, описание, кнопка «Смотреть», выбор озвучки с долей зрителей и серии плитками">
@@ -111,6 +132,7 @@
 - У каждого совета причина и «Почему это?» с кнопками «Меньше такого» и «Не учитывать».
 - «Не моё», «Нравится», «Обожаю» на странице и правым кликом по постеру. Оценённый фильм считается просмотренным: уходит из «Продолжить просмотр» и отмечается на сайте.
 - «Уточнить вкус» за минуту: что вам близко, пара своих тайтлов, «Что хочется посмотреть?». Советы меняются на глазах.
+- «Вам подойдёт?» на странице тайтла: «Скорее зайдёт», «50 на 50» или «Скорее нет», и почему.
 - Импорт оценок из IMDb и Letterboxd (CSV).
 
 </td>
@@ -289,6 +311,6 @@ cd kinopohuy-macos
 
 ## English
 
-**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (site links, plot similarity via macOS's built-in language model, taste-alike viewers, critics' scores from Wikidata; a «pick for me» that understands plain Russian; coming in 2.1), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
+**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (site links, plot similarity via macOS's built-in language model, taste-alike viewers, critics' scores from Wikidata; a «pick for me» that understands plain Russian; since 2.1), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
 
 macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project on [Boosty](https://boosty.to/sanchella_zzz) or with USDT on TON (address above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).

@@ -30,6 +30,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSWindow.allowsAutomaticWindowTabbing = false
 
+        #if DEBUG
+            KPDemo.scrollIfAsked()
+        #endif
+
         // Quit requests from outside (Sparkle's installer before it swaps the app, the Dock's «Завершить») go through
         // the same door as ⌘Q, so an open sheet doesn't make the app refuse.
         NSAppleEventManager.shared().setEventHandler(
