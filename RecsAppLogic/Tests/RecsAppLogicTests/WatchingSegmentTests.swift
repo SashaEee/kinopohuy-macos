@@ -34,9 +34,16 @@ struct WatchingSegmentTests {
     }
 
     @Test func nothingStartedCanStart() {
-        #expect(WatchingSegment.classify(series(season: 1, episode: 1, daysAgo: 3), now: now) == .canStart)
         #expect(WatchingSegment.classify(series(season: nil, episode: nil, daysAgo: nil), now: now) == .canStart)
-        #expect(WatchingSegment.classify(film(fraction: nil, daysAgo: 100), now: now) == .canStart)
+        #expect(WatchingSegment.classify(series(season: nil, episode: nil, daysAgo: 40), now: now) == .canStart)
+    }
+
+    /// The site lists what was played: a series at its first episode is under way, a film is too.
+    @Test func whatTheSiteListsWasPlayed() {
+        #expect(WatchingSegment.classify(series(season: 1, episode: 1, daysAgo: 3), now: now) == .continueWatching)
+        #expect(WatchingSegment.classify(film(fraction: nil, daysAgo: 10), now: now) == .continueWatching)
+        // An old film with no idea how far: not a shelf of its own, only under «Все».
+        #expect(WatchingSegment.classify(film(fraction: nil, daysAgo: 100), now: now) == nil)
     }
 
     @Test func firstEpisodePlayedHereIsStarted() {

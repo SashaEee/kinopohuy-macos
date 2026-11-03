@@ -243,6 +243,12 @@ enum WatchingSegment: String, CaseIterable, Sendable, Hashable, Identifiable {
     static func classify(_ facts: WatchingFacts, now: Date) -> WatchingSegment? {
         if facts.watched { return .watched }
         if facts.isSetAside { return nil }
+        // On the site a film is in «Досмотреть» because it was played (its card shows the voice-over), but how far isn't
+        // known unless this Mac played it: recent ones are «Продолжить», older ones only under «Все».
+        if !facts.isSeries, facts.filmFraction == nil, !facts.playedHere {
+            guard let last = facts.lastActivity else { return .continueWatching }
+            return now.timeIntervalSince(last) / 86400 <= Double(recentDays) ? .continueWatching : nil
+        }
         guard facts.isStarted else { return .canStart }
         if facts.hasNewEpisode { return .continueWatching }
         guard let last = facts.lastActivity else { return .continueWatching }
@@ -272,11 +278,12 @@ struct WatchingFacts: Sendable, Hashable {
     /// «Убрать из ряда» or «Бросил» was pressed.
     var isSetAside: Bool = false
 
-    /// Any progress at all: a series past its first episode, or something played here.
+    /// Any progress at all: a series with a place on the site («1 сезон 1 серия» is a started first episode), or
+    /// something played here.
     var isStarted: Bool {
         if playedHere { return true }
         if let fraction = filmFraction, fraction > 0 { return true }
-        if isSeries, let season, let episode { return season > 1 || episode > 1 }
+        if isSeries { return season != nil && episode != nil }
         return false
     }
 
