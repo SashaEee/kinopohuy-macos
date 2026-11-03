@@ -45,6 +45,10 @@ public struct Weights: Codable, Sendable, Hashable {
     public var affinitySmoothing: Double = 2
     /// A liked genre, country, person, collection or list needs A(f) above this to make a title «in taste».
     public var tasteMatchMinAffinity: Double = 0.1
+    /// Added to aff(t)'s denominator (in group-weight units): a title matching in several groups beats one lucky match.
+    public var affinityTitleSmoothing: Double = 1.0
+    /// aff(t) of a title known only from a card (year, country, main genre) is scaled by this.
+    public var cardAffinityCertainty: Double = 0.85
     public var groupWeights: [String: Double] = [
         "genre": 1.0, "country": 0.7, "decade": 0.4, "director": 1.2, "actor": 0.5, "kind": 0.8,
         "duration": 0.3, "collection": 0.6, "list": 0.6,
@@ -221,6 +225,8 @@ public struct Weights: Codable, Sendable, Hashable {
         try d(.typicalSeasonEpisodes, &typicalSeasonEpisodes)
         try d(.affinitySmoothing, &affinitySmoothing)
         try d(.tasteMatchMinAffinity, &tasteMatchMinAffinity)
+        try d(.affinityTitleSmoothing, &affinityTitleSmoothing)
+        try d(.cardAffinityCertainty, &cardAffinityCertainty)
         try m(.groupWeights, &groupWeights)
         try d(.anchorMinWeight, &anchorMinWeight)
         try i(.anchorCount, &anchorCount)

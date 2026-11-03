@@ -42,14 +42,34 @@ struct ProfileTests {
         // Detectives on 3 of 4 titles, horror on 2.
         #expect(abs(core.table.idf[detective] - (log(5.0 / 4.0) + 1)) < 1e-12)
         #expect(abs(core.table.idf[horror] - (log(5.0 / 3.0) + 1)) < 1e-12)
-        // aff(t) = Σ g·idf·A / Σ g·idf (both genres have g = 1).
+        // aff(t): the genres as one group with g = 1 — 0.6·best + 0.4·idf-weighted mean — over (g + c).
         let mixed = try #require(core.titleIndex["4"])
         let a = core.profile.affinity
-        let expected = (core.table.idf[detective] * a[detective] + core.table.idf[horror] * a[horror])
+        let c = Weights.default.affinityTitleSmoothing
+        let mean = (core.table.idf[detective] * a[detective] + core.table.idf[horror] * a[horror])
             / (core.table.idf[detective] + core.table.idf[horror])
-        #expect(abs(core.profile.titleAffinity[mixed] - expected) < 1e-12)
+        let best = max(a[detective], a[horror])
+        #expect(abs(core.profile.titleAffinity[mixed] - (0.6 * best + 0.4 * mean) / (1 + c)) < 1e-12)
         let single = try #require(core.titleIndex["1"])
-        #expect(abs(core.profile.titleAffinity[single] - a[detective]) < 1e-12)
+        #expect(abs(core.profile.titleAffinity[single] - a[detective] / (1 + c)) < 1e-12)
+    }
+
+    /// A fully read page lists people and collections the user never met: they mustn't drag its match below a bare
+    /// card with the same liked genre.
+    @Test func unknownFeaturesDontDilute() throws {
+        let stranger = Fixture.person("x", "Незнакомый режиссёр")
+        let titles = [
+            bare("1", genres: ["Детективы"]), bare("2", genres: ["Детективы"]),
+            bare("card", genres: ["Детективы"]),
+            bare("page", genres: ["Детективы"], directors: [stranger]),
+        ]
+        var signals = UserSignals()
+        signals.sessions = [Fixture.watched("1", daysAgo: 0), Fixture.watched("2", daysAgo: 0)]
+        let core = core(titles, signals)
+        let card = try #require(core.titleIndex["card"])
+        let page = try #require(core.titleIndex["page"])
+        #expect(core.profile.titleAffinity[card] > 0)
+        #expect(abs(core.profile.titleAffinity[page] - core.profile.titleAffinity[card]) < 1e-12)
     }
 
     @Test func personNeedsTwoDislikesToSinkBelowFloor() {

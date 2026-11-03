@@ -97,25 +97,67 @@ enum ProfileBuilder {
             }
         }
 
-        // aff(t) = Σ g·idf·A / Σ g·idf over the title's features.
+        // aff(t) = Σ G·v / (Σ G + c) over the title's feature groups that hold a feature the user has met (support > 0),
+        // G being the group's weight and v its value: genres and countries by 0.6·best + 0.4·idf-weighted mean (a bare card
+        // knows only its main genre, a page all of them: the best one keeps them comparable, the mean still marks a
+        // thriller-drama as less of a thriller); decade, kind and length have one each; people, collections and lists by
+        // the strongest match (one favourite
+        // actor is a match, an unknown cast isn't a miss; with no liked one, the most disliked counts). Features nobody
+        // watched say nothing either way, so a fully read page isn't diluted below a bare card with one matching genre.
+        // The constant keeps one lucky feature from making a perfect match.
         // A country alone is too coarse to call a title «in taste» (most of anyone's films are American); it counts
         // only for a bare card whose genres aren't known yet.
         let tasteGroups: Set<FeatureKey.Group> = [.genre, .director, .actor, .collection, .list]
+        let allGroups = FeatureKey.Group.allCases
+        let groupIndex = Dictionary(uniqueKeysWithValues: allGroups.enumerated().map { ($1, $0) })
+        let featureGroup = table.keys.map { groupIndex[$0.group] ?? 0 }
+        let averaged = allGroups.map { [.genre, .country, .decade, .kind, .duration].contains($0) }
         var titleAffinity = [Double](repeating: 0, count: titles.count)
         var tasteMatch = [Bool](repeating: false, count: titles.count)
+        var groupWeight = [Double](repeating: 0, count: allGroups.count)
+        var groupSum = groupWeight
+        var groupNorm = groupWeight
+        var groupBest = groupWeight
+        var groupWorst = groupWeight
+        var groupSeen = [Bool](repeating: false, count: allGroups.count)
         for index in 0..<titles.count {
-            var sum: Double = 0
-            var norm: Double = 0
-            let groups = titles[index].genres.isEmpty ? tasteGroups.union([.country]) : tasteGroups
+            for g in 0..<allGroups.count {
+                groupSeen[g] = false
+                groupSum[g] = 0
+                groupNorm[g] = 0
+                groupBest[g] = -.infinity
+                groupWorst[g] = .infinity
+            }
+            let matchGroups = titles[index].genres.isEmpty ? tasteGroups.union([.country]) : tasteGroups
             for feature in table.ofTitle[index] {
-                let weight = table.groupWeight[feature] * table.idf[feature]
-                sum += weight * affinity[feature]
-                norm += weight
-                if affinity[feature] > weights.tasteMatchMinAffinity, groups.contains(table.keys[feature].group) {
+                guard support[feature] > 0 else { continue }
+                let g = featureGroup[feature]
+                let value = affinity[feature]
+                groupSeen[g] = true
+                groupWeight[g] = table.groupWeight[feature]
+                if averaged[g] {
+                    groupSum[g] += table.idf[feature] * value
+                    groupNorm[g] += table.idf[feature]
+                }
+                groupBest[g] = max(groupBest[g], value)
+                groupWorst[g] = min(groupWorst[g], value)
+                if value > weights.tasteMatchMinAffinity, matchGroups.contains(table.keys[feature].group) {
                     tasteMatch[index] = true
                 }
             }
-            titleAffinity[index] = norm > 0 ? sum / norm : 0
+            var sum: Double = 0
+            var norm: Double = 0
+            for g in 0..<allGroups.count where groupSeen[g] {
+                let mean = groupNorm[g] > 0 ? groupSum[g] / groupNorm[g] : 0
+                let value = averaged[g]
+                    ? 0.6 * groupBest[g] + 0.4 * mean
+                    : (groupBest[g] > 0 ? groupBest[g] : groupWorst[g])
+                sum += groupWeight[g] * value
+                norm += groupWeight[g]
+            }
+            // A card is three facts about a title: what it says is less certain than a page.
+            let certainty = titles[index].level == .card ? weights.cardAffinityCertainty : 1
+            titleAffinity[index] = norm > 0 ? certainty * sum / (norm + weights.affinityTitleSmoothing) : 0
         }
 
         let inPool = weighted.filter { !$0.signal.notSeed }
