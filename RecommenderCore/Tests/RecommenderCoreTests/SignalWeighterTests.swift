@@ -113,24 +113,35 @@ struct SignalWeighterTests {
     }
 
     @Test func accountListWithoutLocalData() throws {
-        let titles = [Fixture.film("w"), Fixture.film("r"), Fixture.series("stale"), Fixture.film("old")]
+        let titles = [
+            Fixture.film("w"), Fixture.film("r"), Fixture.series("stale"), Fixture.film("old"), Fixture.series("deep"),
+            Fixture.series("queued"),
+        ]
         var signals = UserSignals()
         signals.accountList = [
             AccountListItem(titleId: "w", watched: true, lastActivityAt: Fixture.now),
             AccountListItem(titleId: "r", watched: false, lastActivityAt: Fixture.now - 10 * Fixture.day),
             AccountListItem(titleId: "stale", watched: false, lastActivityAt: Fixture.now - 100 * Fixture.day, season: 1, episode: 2),
             AccountListItem(titleId: "old", watched: true, lastActivityAt: nil),
+            AccountListItem(titleId: "deep", watched: false, lastActivityAt: Fixture.now - 200 * Fixture.day, season: 2, episode: 3),
+            AccountListItem(titleId: "queued", watched: false, lastActivityAt: Fixture.now - 5 * Fixture.day),
         ]
         let result = weigh(signals, titles: titles)
         let watched = try #require(result["w"])
         #expect(watched.weight == 0.6)
         #expect(watched.state == .seen)
         #expect(watched.finished)
+        // A film in «Досмотреть» was played: it counts toward taste and stays out of the recommendations.
         let recent = try #require(result["r"])
-        #expect(abs(recent.weight - 0.4 * decay(10)) < 1e-12)
-        #expect(recent.accountListNoProgress)
-        #expect(recent.intent == 0.3)
-        #expect(recent.state == WatchState.none)
+        #expect(abs(recent.weight - 0.45 * decay(10)) < 1e-12)
+        #expect(!recent.accountListNoProgress)
+        #expect(recent.state == .started)
+        // A series with no place yet is waiting to be started: «Можно начать».
+        let queued = try #require(result["queued"])
+        #expect(queued.accountListNoProgress)
+        #expect(queued.intent == 0.3)
+        #expect(queued.state == WatchState.none)
+        #expect(abs(try #require(result["deep"]).weight - 0.6 * decay(200)) < 1e-12)
         let stale = try #require(result["stale"])
         #expect(abs(stale.weight - (-0.2 * decay(100))) < 1e-12)
         #expect(stale.state == .started)

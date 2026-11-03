@@ -285,7 +285,18 @@ actor RecommenderEngine {
             weights: .default,
             seed: Self.seed(day: now, salt: salt),
         )
+        #if DEBUG
+            // KP_REC_DUMP=1: the engine's whole input as JSON (rec-input.json in the app's temporary folder, the one place
+            // the sandbox lets it write), for RecEval's offline check on real history.
+            if ProcessInfo.processInfo.environment["KP_REC_DUMP"] != nil, let data = try? JSONEncoder().encode(input) {
+                try? data.write(to: FileManager.default.temporaryDirectory.appending(path: "rec-input.json"))
+            }
+        #endif
+        let start = Date()
         let prepared = await Task.detached(priority: .utility) { Recommender.prepare(input) }.value
+        #if DEBUG
+            print("Recommender: \(titlesList.count) titles, \(prepared.output.ranked.count) ranked, \(prepared.output.page.rows.count) rows in \(Int(Date().timeIntervalSince(start) * 1000)) ms")
+        #endif
 
         self.prepared = prepared
         pool = Dictionary(titlesList.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -344,6 +355,7 @@ actor RecommenderEngine {
         encoder.outputFormatting = .sortedKeys
         var data = (try? encoder.encode(signals)) ?? Data()
         data.append((try? encoder.encode(settings)) ?? Data())
+        data.append(Data("engine \(Recommender.version)".utf8))
         return String(RecParsing.fnv1a(data), radix: 16)
     }
 

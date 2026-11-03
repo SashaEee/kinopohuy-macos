@@ -267,10 +267,11 @@ struct HomeAssembler {
             return order
         }
 
-        // «Для вас».
+        // «Для вас»: what the user hasn't lined up already (their own queue is «Можно начать»).
         let discoveryTitles = discoveryCandidates(inRanked: inRanked)
+        let notQueued = rankedTitles.filter { (core.signal($0)?.intent ?? 0) <= 0 }
         plans.append(RowPlan(
-            id: "forYou", kind: .forYou, title: "Для вас", candidates: Array(rankedTitles.prefix(weights.mmrWindow)),
+            id: "forYou", kind: .forYou, title: "Для вас", candidates: Array(notQueued.prefix(weights.mmrWindow)),
             diversify: true, window: weights.mmrWindow, minItems: weights.rowMinItems,
             discoveries: discoveryTitles, order: next(),
         ))

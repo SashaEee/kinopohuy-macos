@@ -246,8 +246,10 @@ enum ReasonBuilder {
                     long: "Из списка \(RussianText.quoted(board.name))", evidence: evidence,
                 )
             }
+            // «Лучшие детективы 2002 года» → «№ 1 · детективы 2002»: the year must survive the cut, or a place in one
+            // year's list reads as the best of all time.
             return Reason(
-                kind: .rankedList, short: RussianText.fitQuoted("\(rank) место в ", board.name),
+                kind: .rankedList, short: RussianText.fit("№ \(rank) · " + RussianText.listShortName(board.name)),
                 long: "\(rank) место в \(RussianText.quoted(board.name))", evidence: evidence,
             )
         case .collection:

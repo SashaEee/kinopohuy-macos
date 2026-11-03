@@ -1,6 +1,6 @@
 import Foundation
 
-/// The offline test (§8.3): hide the last N titles the user finished, run the engine on what's left, and see whether
+/// The offline test (§8.3): hide the last N titles the user finished (or, short of those, played), run the engine on what's left, and see whether
 /// it finds them. The hidden titles stay in the pool; every signal about them goes (sessions, positions, the
 /// «Досмотреть» entry, bookmarks, follows, ratings, feedback, impressions), so nothing leaks.
 public enum Holdout {
@@ -22,7 +22,17 @@ public enum Holdout {
                 return (signal.titleId, at)
             }
             .sorted { $0.at != $1.at ? $0.at > $1.at : TitleOrder.precedes($0.id, $1.id) }
-        let hidden = Array(finished.prefix(max(0, count)).map(\.id))
+        // Accounts that never mark anything watched (most of them) still played things: the most recently played
+        // titles with a positive weight fill up the rest.
+        let finishedIds = Set(finished.map(\.id))
+        let played = signals.values
+            .compactMap { signal -> (id: String, at: Double)? in
+                guard !finishedIds.contains(signal.titleId), signal.weight > 0, signal.state != .none,
+                      poolIds.contains(signal.titleId), let at = signal.lastActivity else { return nil }
+                return (signal.titleId, at)
+            }
+            .sorted { $0.at != $1.at ? $0.at > $1.at : TitleOrder.precedes($0.id, $1.id) }
+        let hidden = Array((finished + played).prefix(max(0, count)).map(\.id))
         let hiddenSet = Set(hidden)
 
         var train = input

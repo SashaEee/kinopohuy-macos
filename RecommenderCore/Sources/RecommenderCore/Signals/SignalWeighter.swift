@@ -173,23 +173,32 @@ enum SignalWeighter {
             if let item {
                 signal.inAccountList = true
                 let hasProgress = item.season != nil || item.episode != nil
+                // The site's «Досмотреть» holds what was played: a film there was started (it has no place to show),
+                // a series without a place wasn't.
+                let started = hasProgress || !isSeries
                 if item.watched {
                     accountState = .seen
                     signal.completedAt = signal.completedAt ?? item.lastActivityAt
-                } else if hasProgress {
+                } else if started {
                     accountState = .started
                 }
                 if !signal.hasLocalData {
                     let at = item.lastActivityAt ?? (now - weights.undatedAgeDays * day)
                     let ageDays = EngineTime.days(from: at, to: now)
+                    let deep = (item.season ?? 0) >= 2 || (item.episode ?? 0) >= 5
                     if item.watched {
                         components.append((weights.listWatched, at))
-                    } else if ageDays <= 30 {
-                        components.append((weights.listRecent, at))
                     } else if ageDays > 90, isSeries, hasProgress, (item.season ?? 1) <= 1, (item.episode ?? 0) <= 2 {
                         components.append((weights.listStale, at))
+                    } else if isSeries, deep {
+                        // A second season or the fifth episode: watched a good deal of it, wherever.
+                        components.append((weights.listWatched, at))
+                    } else if started {
+                        components.append((weights.listStarted, at))
+                    } else if ageDays <= 30 {
+                        components.append((weights.listRecent, at))
                     }
-                    if !item.watched, !hasProgress { signal.accountListNoProgress = true }
+                    if !item.watched, !started { signal.accountListNoProgress = true }
                 }
                 if !item.watched, let season = item.season, let episode = item.episode, signal.resume == nil {
                     signal.resume = EpisodeRef(season: season, episode: episode, isNext: false)

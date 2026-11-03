@@ -39,6 +39,25 @@ enum RussianText {
     }
 
     /// A template with a quoted name, shortening the name until the line fits: `prefix + «name» + suffix`.
+    /// A site list's name for a short line: «Лучшие детективы 2002 года» → «детективы 2002», «Лучшие сериалы» → «лучшие
+    /// сериалы».
+    static func listShortName(_ name: String) -> String {
+        var short = name.trimmingCharacters(in: .whitespaces)
+        if short.hasSuffix(" года") { short = String(short.dropLast(5)) }
+        if short.lowercased().hasPrefix("лучшие "), short.range(of: "(19|20)\\d\\d", options: .regularExpression) != nil {
+            short = String(short.dropFirst(7))
+        }
+        return short.prefix(1).lowercased() + short.dropFirst()
+    }
+
+    /// A line cut to the short limit with «…», at a word when it can be.
+    static func fit(_ text: String, limit: Int = shortLimit) -> String {
+        guard text.count > limit else { return text }
+        let cut = text.prefix(limit - 1)
+        let word = cut.lastIndex(of: " ").map { cut[..<$0] } ?? cut
+        return (word.count >= limit / 2 ? word : cut).trimmingCharacters(in: .whitespaces) + "…"
+    }
+
     static func fitQuoted(_ prefix: String, _ name: String, _ suffix: String = "", limit: Int = shortLimit) -> String {
         let full = prefix + quoted(name) + suffix
         if full.count <= limit { return full }

@@ -26,8 +26,12 @@ enum QualityFreshSource {
             var bestPlace: (board: Int, value: Double)?
             for board in core.graph.titleBoards[title] where core.graph.board(board).kind == .list {
                 guard let rank = rank(of: title, in: board, core: core) else { continue }
-                let size = max(core.graph.boardSize[board], rank)
-                let value = 1 - Double(rank - 1) / Double(max(1, size))
+                // The catalogue rarely holds a whole list: an unknown length counts as the site's usual 50, and one
+                // year's list says less than an all-time one.
+                let ref = core.graph.board(board)
+                let size = max(core.graph.boardSize[board], ref.size ?? 50, rank)
+                let yearly = ref.id.range(of: "(19|20)\\d\\d", options: .regularExpression) != nil
+                let value = (1 - Double(rank - 1) / Double(max(1, size))) * (yearly ? 0.6 : 1)
                 if let current = bestPlace, current.value >= value { continue }
                 bestPlace = (board, value)
             }

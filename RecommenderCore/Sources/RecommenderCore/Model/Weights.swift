@@ -22,6 +22,8 @@ public struct Weights: Codable, Sendable, Hashable {
     public var listWatched: Double = 0.6
     public var listRecent: Double = 0.4
     public var listStale: Double = -0.2
+    /// Played from «Досмотреть» (a film, or a series a few episodes in) with nothing on this Mac to say how far.
+    public var listStarted: Double = 0.45
     public var rewatch: Double = 0.5
     public var bookmarkIntent: Double = 0.3
     public var bookmarkTasteFactor: Double = 0.5
@@ -204,6 +206,7 @@ public struct Weights: Codable, Sendable, Hashable {
         try d(.listWatched, &listWatched)
         try d(.listRecent, &listRecent)
         try d(.listStale, &listStale)
+        try d(.listStarted, &listStarted)
         try d(.rewatch, &rewatch)
         try d(.bookmarkIntent, &bookmarkIntent)
         try d(.bookmarkTasteFactor, &bookmarkTasteFactor)

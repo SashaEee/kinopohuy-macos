@@ -71,7 +71,8 @@ struct SourceTests {
     }
 
     @Test func intentSourceUsesFoldersAndAccountList() throws {
-        let titles = ["1", "2", "3", "4"].map { Fixture.film($0) } + [Fixture.series("5")]
+        // On the site «Досмотреть» holds what was played; a series there with no place yet is the one still to start.
+        let titles = ["1", "3", "4"].map { Fixture.film($0) } + [Fixture.series("2"), Fixture.series("5")]
         var signals = UserSignals()
         signals.bookmarks = [BookmarkItem(titleId: "1", folder: "Посмотреть позже"), BookmarkItem(titleId: "1", folder: "На выходные")]
         signals.accountList = [
