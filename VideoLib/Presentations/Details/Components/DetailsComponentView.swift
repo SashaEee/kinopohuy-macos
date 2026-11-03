@@ -492,7 +492,7 @@ struct DetailsComponentView: View {
                             FeedbackBarView(store: store.scope(state: \.feedback, action: \.feedback))
                         }
                         // «Вам подойдёт?»: only once the recommender knows enough to say (the row stays out otherwise).
-                        FitVerdictView(titleId: titleId, label: "Вам подойдёт?")
+                        .kpFitVerdictRow(titleId: titleId, label: "Вам подойдёт?", spacing: metrics.compact ? 10 : 12)
                     }
                     if details.imdbRating != nil || details.kpRating != nil || details.waRating != nil {
                         FactRow(label: "Оценки") {

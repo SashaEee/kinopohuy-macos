@@ -486,8 +486,10 @@ struct KPReasonLine: View {
                 .font(KP.font(metrics.facts, .semibold))
                 .foregroundStyle(KP.fg.opacity(0.88))
                 .lineLimit(1)
+                .truncationMode(.tail)
         }
-        .fixedSize()
+        // Never wider than the space it's given: a long reason is cut with «…» rather than pushing the layout out.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

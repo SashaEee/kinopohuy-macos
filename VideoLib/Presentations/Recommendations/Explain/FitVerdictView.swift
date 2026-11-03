@@ -2,31 +2,28 @@ import Dependencies
 import RecommenderCore
 import SwiftUI
 
-/// «Вам подойдёт?» on a title's page: «Скорее да / 50 на 50 / Скорее нет» with two pluses and a minus in the user's
-/// terms («+ детектив — ваш жанр № 1 · − 2 ч 38 мин»). No percentages. Nothing shows until the recommender knows enough
-/// about the user and the title, and nothing once it's rated or marked seen.
-struct FitVerdictView: View {
+extension View {
+    /// The verdict as a row under this one (the page's «Ваша оценка»), `spacing` apart. It loads with this row: a view
+    /// with nothing in it yet never appears, so it could never start loading itself.
+    func kpFitVerdictRow(titleId: String, label: String, spacing: CGFloat) -> some View {
+        modifier(FitVerdictRow(titleId: titleId, label: label, spacing: spacing))
+    }
+}
+
+private struct FitVerdictRow: ViewModifier {
     let titleId: String
-    /// A title page's fact row: its label in the page's left column («Вам подойдёт?»), shown only with a verdict.
-    var label: String?
+    let label: String
+    let spacing: CGFloat
 
     @State private var verdict: FitVerdict?
     @Dependency(\.recommender) private var recommender
 
-    var body: some View {
-        Group {
+    func body(content: Content) -> some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            content
             if let verdict, !(verdict.pros.isEmpty && verdict.cons.isEmpty) {
-                HStack(alignment: .firstTextBaseline, spacing: 16) {
-                    if let label {
-                        Text(verbatim: label)
-                            .font(KP.font(13, .medium))
-                            .foregroundStyle(KP.fg38)
-                            .frame(width: 108, alignment: .leading)
-                    }
-                    content(verdict)
-                }
-                .help("Как это сходится с тем, что вы смотрели и оценивали")
-                .transition(.opacity)
+                FitVerdictView(verdict: verdict, label: label)
+                    .transition(.opacity)
             }
         }
         .animation(.easeOut(duration: 0.25), value: verdict)
@@ -44,6 +41,28 @@ struct FitVerdictView: View {
             guard note.object as? String == titleId else { return }
             verdict = nil
         }
+    }
+}
+
+/// «Вам подойдёт?» on a title's page: «Скорее да / 50 на 50 / Скорее нет» with two pluses and a minus in the user's
+/// terms («+ детектив — ваш жанр № 1 · − 2 ч 38 мин»). No percentages. Nothing shows until the recommender knows enough
+/// about the user and the title, and nothing once it's rated or marked seen.
+struct FitVerdictView: View {
+    let verdict: FitVerdict
+    /// A title page's fact row: its label in the page's left column («Вам подойдёт?»).
+    var label: String?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            if let label {
+                Text(verbatim: label)
+                    .font(KP.font(13, .medium))
+                    .foregroundStyle(KP.fg38)
+                    .frame(width: 108, alignment: .leading)
+            }
+            content(verdict)
+        }
+        .help("Как это сходится с тем, что вы смотрели и оценивали")
     }
 
     private func content(_ verdict: FitVerdict) -> some View {
@@ -63,6 +82,8 @@ struct FitVerdictView: View {
                 .font(KP.font(13, .medium))
                 .foregroundStyle(KP.fg70)
                 .lineLimit(2)
+                // Wraps onto its second line rather than being cut on the first.
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
