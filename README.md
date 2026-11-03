@@ -39,6 +39,7 @@
 - **Нативное, а не вкладка браузера.** SwiftUI, плавная прокрутка, клавиатура и медиаклавиши, отдельное окно плеера.
 - **Плеер, который приятно ставить на паузу.** Через несколько секунд паузы появляются название, серия, озвучка и описание, как на большом стриминге.
 - **Всё в один клик.** «Продолжить просмотр» открывает плеер сразу с того места, где вы остановились.
+- **Само подберёт, что посмотреть.** Рекомендации считаются на вашем Mac по тому, что вы смотрите и как оцениваете, и каждая объясняет, почему она здесь.
 - **Ни телеметрии, ни трекеров.** Открытый код. Приложение можно собрать самому одной командой.
 
 ## Как это выглядит
@@ -61,7 +62,7 @@
 <td width="50%" valign="top">
 
 **Главная и каталог**
-- Большая заставка: тайтлы из трендов сменяют друг друга.
+- Большая заставка: сначала подобранное для вас на этот вечер, потом тренды.
 - «Продолжить просмотр»: где вы остановились, а для начатого на этом Mac — полоска прогресса и «Осталось N мин».
 - «Новые серии» по вашим сериалам и ряд «Похоже на…».
 - Каталог с фильтрами, подборки, поиск по мере набора.
@@ -97,6 +98,27 @@
 - Мастер первого запуска и настройки (<kbd>⌘</kbd> <kbd>,</kbd>).
 - Автообновление через Sparkle, каждое обновление проверяется подписью.
 - Приложение обращается только к сайту, адрес которого вы указали (и к серверам, с которых он отдаёт видео и картинки), к GitHub (лента и файлы обновлений) и к Rutube за трейлерами.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Рекомендации**
+- Ряды «Для вас», «Потому что вы смотрите «…»», «Подборки для вас», «Вы могли пропустить», «Можно начать».
+- У каждого совета причина и «Почему это?» с кнопками «Меньше такого» и «Не учитывать».
+- «Не моё», «Нравится», «Обожаю» на странице тайтла и правым кликом по постеру; «Вам подойдёт?» для любого тайтла.
+- «Уточнить вкус»: отметьте, что близко, оцените пару своих тайтлов — советы меняются на глазах.
+- Всё считается и хранится на этом Mac; фоновое чтение каталога сайта можно ограничить или выключить.
+
+</td>
+<td width="50%" valign="top">
+
+**«Выбери за меня»** (<kbd>⌘</kbd> <kbd>J</kbd>)
+- Готовый вариант сразу, с учётом дня недели и времени, и ещё два «Или».
+- Скажите словами (<kbd>⌘</kbd> <kbd>K</kbd>): «лёгкое на полтора часа, смотрим вдвоём», «как «Мост», но короче», «без ужасов».
+- «Полегче», «Помрачнее», «Покороче», «Поновее» поправят выбор, «Другое» покажет следующий.
+- Если ровно такого нет, скажет, какое условие ослабило.
 
 </td>
 </tr>
@@ -249,6 +271,6 @@ cd kinopohuy-macos
 
 ## English
 
-**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
+**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (with a «pick for me» that understands plain Russian), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
 
 macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project on [Boosty](https://boosty.to/sanchella_zzz) or with USDT on TON (address above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).
