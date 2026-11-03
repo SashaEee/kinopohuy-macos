@@ -527,6 +527,9 @@ struct SignalStore: Sendable {
 
 /// The keys of `crawl_state`.
 enum StateKey {
+    /// The day the data pack's searches are counted for, and the count.
+    static let resolveDay = "resolve.day"
+    static let resolveCount = "resolve.count"
     /// The day (yyyy-MM-dd) the background reader's counter is for, and the count.
     static let crawlDay = "crawl.day"
     static let crawlCount = "crawl.count"

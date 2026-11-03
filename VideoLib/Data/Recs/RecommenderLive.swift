@@ -49,6 +49,7 @@ final class RecRuntime: Sendable {
                 candidates: { limit in await engine.cardCandidates(limit: limit) },
                 plan: { await engine.crawlPlan(anchors: signals.anchorIds()) },
                 batchDone: { await engine.rebuildSoon() },
+                suggestions: { limit in await engine.viewerSuggestions(limit: limit) },
             ),
         )
 

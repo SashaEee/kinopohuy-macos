@@ -4,6 +4,16 @@ import GRDB
 /// The recommender's tables beyond v3: what the account's lists last looked like, board sizes and when each was last
 /// read, the genre names behind path slugs, the background reader's counters and the cached title pages.
 enum RecSchema {
+    /// What was looked up on the site for the data pack's viewer suggestions: the IMDb id, the title found (nil: not
+    /// on the site), when. A title found here is that IMDb id from then on; nothing is searched twice.
+    static func migrateV5(_ db: Database) throws {
+        try db.create(table: "pack_lookup", options: [.ifNotExists, .strict]) { t in
+            t.column("imdb", .integer).notNull().primaryKey()
+            t.column("titleId", .text)
+            t.column("searchedAt", .real).notNull()
+        }
+    }
+
     static func migrateV4(_ db: Database) throws {
         // «Досмотреть» as the site last showed it (one request gives the whole list, so it's replaced each time).
         try db.create(table: "account_list", options: [.ifNotExists, .strict]) { t in

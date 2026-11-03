@@ -640,6 +640,10 @@ struct VideoLibApp: App {
             try RecSchema.migrateV4(db)
         }
 
+        migrator.registerMigration("v5") { db in
+            try RecSchema.migrateV5(db)
+        }
+
         try migrator.migrate(database)
 
         return database

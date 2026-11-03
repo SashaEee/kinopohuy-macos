@@ -42,6 +42,8 @@ actor RecommenderEngine {
     private let titles: TitleStore
     private let signals: SignalStore
     private let broadcaster: RecBroadcaster
+    /// The open data pack: critics' scores, missing IMDb ids, viewer neighbours.
+    private let pack = RecsPack()
 
     private var prepared: PreparedEngine?
     private var snapshot: RecSnapshot?
@@ -133,6 +135,14 @@ actor RecommenderEngine {
         let missing = ids.filter { pool[$0] == nil }
         let stored = missing.isEmpty ? [:] : await titles.titles(missing)
         return ids.compactMap { pool[$0] ?? stored[$0] }
+    }
+
+    /// Films the viewers of the user's titles liked that the pool lacks: what the background reader looks for on the
+    /// site next.
+    func viewerSuggestions(limit: Int) async -> [RecsPack.Suggestion] {
+        guard let prepared = await ensurePrepared(), await pack.isAvailable else { return [] }
+        let looked = Set(await titles.packLookups().keys)
+        return await pack.suggestions(seeds: prepared.tasteSeeds(), excluding: looked, limit: limit)
     }
 
     /// «Вкус изучен на N %».
@@ -294,7 +304,9 @@ actor RecommenderEngine {
         async let poolTitles = titles.pool(now: now)
         async let userSignals = signals.signals(signedIn: Defaults[.isLoggedIn], now: now)
         let salt = await profileSalt()
-        let (titlesList, signalsNow) = await (poolTitles, userSignals)
+        let (stored, signalsNow) = await (poolTitles, userSignals)
+        await pack.remember(titles.packLookups().compactMapValues { $0 }.reduce(into: [:]) { $0[$1.value] = $1.key })
+        let (titlesList, viewerNeighbours) = await pack.enrich(stored)
 
         let input = EngineInput(
             context: EngineContext(date: now),
@@ -303,6 +315,7 @@ actor RecommenderEngine {
             settings: settings,
             weights: .default,
             seed: Self.seed(day: now, salt: salt),
+            viewerNeighbours: viewerNeighbours,
         )
         #if DEBUG
             // KP_REC_DUMP=1: the engine's whole input as JSON (rec-input.json in the app's temporary folder, the one place

@@ -6,9 +6,11 @@ import RecommenderCore
 /// «Смотрите также», lists and collections. Only for a signed-in user (the site doesn't show title pages to
 /// guests) with «Изучение каталога» on, within the daily limit, one page at a time through `SiteQueue`.
 ///
-/// What comes first: the titles that make the user's taste (this Mac's history, «Досмотреть», ratings, bookmarks)
-/// without a page or with an aged one; then, once a week, the pool crawl; then the engine's best candidates still
-/// known only as cards; then the cards that share lists, collections, franchises and people with the user's titles.
+/// What comes first: (up to `resolveDailyLimit` searches a day) the films viewers of the user's titles liked that
+/// the pool lacks, looked up on the site by name; then the titles that make the user's taste (this Mac's history,
+/// «Досмотреть», ratings, bookmarks) without a page or with an aged one; then, once a week, the pool crawl; then the
+/// engine's best candidates still known only as cards; then the cards that share lists, collections, franchises and
+/// people with the user's titles.
 /// Every few pages the engine is told, and it redraws Home (debounced).
 actor TitleEnricher {
     struct Hooks: Sendable {
@@ -18,6 +20,8 @@ actor TitleEnricher {
         var plan: @Sendable () async -> PoolCrawler.Plan
         /// A batch of pages came in.
         var batchDone: @Sendable () async -> Void
+        /// Films the viewers of the user's titles liked that the pool lacks (the data pack), best first.
+        var suggestions: @Sendable (_ limit: Int) async -> [RecsPack.Suggestion]
     }
 
     private struct Target: Sendable {
@@ -28,6 +32,7 @@ actor TitleEnricher {
     private enum Step {
         case page(Target)
         case crawl
+        case resolve([RecsPack.Suggestion])
     }
 
     private let titles: TitleStore
@@ -43,6 +48,9 @@ actor TitleEnricher {
     static let failureMemory: TimeInterval = 7 * TitleFreshness.day
     /// With nothing to read, how long until it looks again.
     static let idleInterval: TimeInterval = 30 * 60
+    /// Searches a day for the data pack's suggestions (within the reader's daily limit), and how many at a time.
+    static let resolveDailyLimit = 60
+    static let resolveBatch = 10
 
     private var loop: Task<Void, Never>?
     /// Bumped by every start and stop, so an old loop still winding down never takes over a new one's state.
@@ -137,6 +145,27 @@ actor TitleEnricher {
                 }
                 await flush()
 
+            case let .resolve(suggestions):
+                pending = []
+                for suggestion in suggestions {
+                    guard !Task.isCancelled, Self.isAllowed else { break }
+                    do {
+                        let query = suggestion.ru ?? suggestion.en ?? ""
+                        let cards = try await queue.read(SearchService.search(query: query, page: 1)) { try SearchParser.parseSearch(from: $0) }
+                        await countResolve()
+                        let match = Self.match(suggestion, in: cards)
+                        if let match { await titles.upsertCards([match], board: nil) }
+                        await titles.recordPackLookup(imdb: suggestion.imdb, titleId: match.flatMap { RecParsing.titleId(fromPath: $0.movieId) })
+                        sinceBatch += 1
+                    } catch let failure as SiteFailure {
+                        if failure == .signedOut || failure == .notConfigured || failure == .cancelled { break reading }
+                        break // refusals and the day's limit: the queue waits; these are asked again later
+                    } catch {
+                        await titles.recordPackLookup(imdb: suggestion.imdb, titleId: nil)
+                    }
+                }
+                await flush()
+
             case let .page(target):
                 do {
                     let page = try await details.getMovieDetails(movieId: target.path)
@@ -174,11 +203,20 @@ actor TitleEnricher {
             return .page(pending.removeFirst())
         }
 
+        // The data pack's suggestions first, within their own small daily share: they bring titles the site would
+        // never show in the rows the reader goes through.
+        let searches = await resolveBudgetLeft()
+        if searches > 0 {
+            let suggestions = await hooks.suggestions(min(Self.resolveBatch, searches))
+            if !suggestions.isEmpty { return .resolve(suggestions) }
+        }
+
         let anchors = await signals.anchorIds()
         let needAnchors = await targets(among: anchors, important: true, limit: 30)
         if !needAnchors.isEmpty { return refill(needAnchors) }
 
         if await crawler.isDue() { return .crawl }
+
 
         let candidates = await targets(among: hooks.candidates(60), important: true, limit: 30)
         if !candidates.isEmpty { return refill(candidates) }
@@ -188,6 +226,39 @@ actor TitleEnricher {
 
         pending = []
         return nil
+    }
+
+    /// The search result that is the suggested film: by its Russian name (either half of «А / Б») and year (±1); a
+    /// search by the English name only when exactly one result has the year (the site's cards are named in Russian).
+    static func match(_ suggestion: RecsPack.Suggestion, in cards: [MovieSimple]) -> MovieSimple? {
+        let found = cards.map { (card: $0, year: CardCaptionParser.parse($0.details).year) }
+        if let ru = suggestion.ru {
+            let key = RecsPack.fold(ru)
+            return found.first { item in
+                let name = item.card.name ?? ""
+                let names = [name] + name.components(separatedBy: " / ")
+                guard names.map(RecsPack.fold).contains(key) else { return false }
+                guard let year = item.year, let wanted = suggestion.year else { return true }
+                return abs(year - wanted) <= 1
+            }?.card
+        }
+        let sameYear = found.filter { $0.year != nil && $0.year == suggestion.year }
+        return sameYear.count == 1 ? sameYear[0].card : nil
+    }
+
+    /// Searches left today for the data pack's suggestions.
+    private func resolveBudgetLeft(now: Date = .now) async -> Int {
+        let today = SiteQueue.dayKey(now)
+        guard await signals.state(StateKey.resolveDay) == today else { return Self.resolveDailyLimit }
+        let used = await signals.state(StateKey.resolveCount).flatMap(Int.init) ?? 0
+        return max(0, Self.resolveDailyLimit - used)
+    }
+
+    private func countResolve(now: Date = .now) async {
+        let today = SiteQueue.dayKey(now)
+        let used = await signals.state(StateKey.resolveDay) == today ? (await signals.state(StateKey.resolveCount).flatMap(Int.init) ?? 0) : 0
+        await signals.setState(StateKey.resolveDay, today, now: now)
+        await signals.setState(StateKey.resolveCount, String(used + 1), now: now)
     }
 
     private func refill(_ targets: [Target]) -> Step? {

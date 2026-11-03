@@ -62,4 +62,10 @@ extension PreparedEngine {
         }
         return chosen.map { core.titles[$0].id }
     }
+
+    /// The titles the taste stands on (anchors, or every liked one when there are few), strongest first: what the data
+    /// pack's viewer neighbours are asked about.
+    public func tasteSeeds(limit: Int = 80) -> [(titleId: String, weight: Double)] {
+        core.profile.seeds.prefix(limit).map { (core.titles[$0.title].id, $0.weight) }
+    }
 }

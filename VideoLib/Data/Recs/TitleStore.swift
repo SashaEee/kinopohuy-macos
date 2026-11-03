@@ -504,6 +504,28 @@ struct TitleStore: Sendable {
         }
     }
 
+    // MARK: Pack lookups
+
+    /// Every IMDb id looked up on the site so far, with the title found (nil: not there).
+    func packLookups() async -> [Int: String?] {
+        (try? await database.read { db in
+            var result: [Int: String?] = [:]
+            for row in try Row.fetchAll(db, sql: "SELECT imdb, titleId FROM pack_lookup") {
+                result[row["imdb"]] = row["titleId"] as String?
+            }
+            return result
+        }) ?? [:]
+    }
+
+    func recordPackLookup(imdb: Int, titleId: String?, now: Date = .now) async {
+        _ = try? await database.write { db in
+            try db.execute(
+                sql: "INSERT OR REPLACE INTO pack_lookup (imdb, titleId, searchedAt) VALUES (?, ?, ?)",
+                arguments: [imdb, titleId, now.timeIntervalSince1970],
+            )
+        }
+    }
+
     static func placeholders(_ count: Int) -> String {
         Array(repeating: "?", count: count).joined(separator: ", ")
     }
