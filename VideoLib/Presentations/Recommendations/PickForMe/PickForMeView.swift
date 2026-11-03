@@ -24,8 +24,11 @@ struct PickForMeView: View {
 
                 Divider().overlay(KP.line)
 
-                pickArea
-                    .frame(minHeight: 236, alignment: .top)
+                // One block: the question, the pick, the rating prompt stack up from the top.
+                VStack(alignment: .leading, spacing: 12) {
+                    pickArea
+                }
+                .frame(minHeight: 236, alignment: .top)
 
                 Divider().overlay(KP.line)
 
@@ -294,14 +297,7 @@ struct PickForMeView: View {
                         .lineLimit(1)
                 }
                 if !main.reason.long.isEmpty {
-                    Label {
-                        Text(verbatim: main.reason.long)
-                    } icon: {
-                        Image(systemName: "sparkles")
-                    }
-                    .font(KP.font(13, .semibold))
-                    .foregroundStyle(KP.sun)
-                    .lineLimit(2)
+                    KPReasonLine(text: main.reason.long)
                 }
                 if !title.recRatings.isEmpty {
                     HStack(spacing: 6) {

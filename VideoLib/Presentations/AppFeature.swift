@@ -161,6 +161,10 @@ struct AppFeature {
                     if ProcessInfo.processInfo.environment["KP_SIGNIN"] != nil {
                         state.destination = .signIn(SignInFeature.State())
                     }
+                    // KP_PICK opens «Выбери за меня» (KP_PICK=text: with the cursor in its field).
+                    if let pick = ProcessInfo.processInfo.environment["KP_PICK"] {
+                        state.pickForMe = PickForMeFeature.State(focusText: pick == "text")
+                    }
                 #endif
 
                 return .merge(
