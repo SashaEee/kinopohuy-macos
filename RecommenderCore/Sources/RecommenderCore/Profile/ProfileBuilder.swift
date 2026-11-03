@@ -214,7 +214,8 @@ enum ProfileBuilder {
         table: FeatureTable, affinity: [Double], support: [Int], positiveSupport: [Int], positiveCount: Int,
         negativeCount: Int, seriesShare: Double,
     ) -> ProfileSummary {
-        let shown: Set<FeatureKey.Group> = [.genre, .country, .decade, .director, .actor, .kind]
+        // «Фильмы» and «Сериалы» say little about taste; the series share is reported apart.
+        let shown: Set<FeatureKey.Group> = [.genre, .country, .decade, .director, .actor]
         var liked: [(feature: Int, rank: Double)] = []
         var disliked: [(feature: Int, rank: Double)] = []
         for feature in 0..<table.count where shown.contains(table.keys[feature].group) {

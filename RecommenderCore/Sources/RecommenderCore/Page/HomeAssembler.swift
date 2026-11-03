@@ -340,11 +340,16 @@ struct HomeAssembler {
             ))
         }
 
-        // «Что-то новое».
+        // «Что-то новое» when it's mostly exploration (genres and countries the user hasn't tried); far links of the
+        // site's graph in their own genres are «Вы могли пропустить» (calling them new would contradict their reasons).
         if !discoveryTitles.isEmpty {
+            let exploration = Set((rankings[.exploration]?.hits ?? []).map(\.title))
+            let head = discoveryTitles.prefix(20)
+            let novel = head.filter(exploration.contains).count * 2 >= head.count
             plans.append(RowPlan(
-                id: "discover", kind: .discover, title: "Что-то новое", candidates: discoveryTitles, diversify: true,
-                minItems: weights.rowMinItems, options: ReasonOptions(preferredKinds: [.discovery]), order: next(),
+                id: "discover", kind: .discover, title: novel ? "Что-то новое" : "Вы могли пропустить",
+                candidates: discoveryTitles, diversify: true, minItems: weights.rowMinItems,
+                options: ReasonOptions(preferredKinds: novel ? [.discovery] : []), order: next(),
             ))
         }
 

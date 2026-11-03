@@ -4,6 +4,10 @@ import Foundation
 /// countries, decade, directors, the top five actors, kind, a duration bucket, collections and ranked lists.
 /// Card-level titles simply have fewer features; nothing here needs a full page.
 struct FeatureTable: Sendable {
+    /// The site files every title under one of these besides its genres («Зарубежные», «Русские»): sections of its
+    /// catalogue, not taste (the country and the kind already say it).
+    static let siteSections: Set<String> = ["зарубежные", "русские", "полнометражные", "фильмы", "сериалы"]
+
     private(set) var keys: [FeatureKey] = []
     /// Display names («Детективы», «Скандинавия», «2010-е», «Дэвид Финчер»).
     private(set) var names: [String] = []
@@ -50,7 +54,9 @@ struct FeatureTable: Sendable {
             var titleGenres: [Int] = []
             var first: Int?
             for genre in title.genres where !genre.trimmingCharacters(in: .whitespaces).isEmpty {
-                let id = intern(FeatureKey(.genre, normalized(genre)), genre)
+                let key = normalized(genre)
+                guard !Self.siteSections.contains(key) else { continue }
+                let id = intern(FeatureKey(.genre, key), genre)
                 if first == nil { first = id }
                 if ids.insert(id).inserted { titleGenres.append(id) }
             }

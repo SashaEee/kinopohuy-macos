@@ -35,7 +35,7 @@ enum AffinitySource {
     /// Features of a title by g·idf·A, liked ones only (A > 0.1), skipping lists and duration buckets that don't read
     /// as taste.
     static func topFeatures(of title: Int, core: EngineCore, limit: Int) -> [Int] {
-        let readable: Set<FeatureKey.Group> = [.genre, .country, .decade, .director, .actor, .kind, .collection]
+        let readable: Set<FeatureKey.Group> = [.genre, .country, .decade, .director, .actor, .collection]
         var ranked: [(feature: Int, value: Double)] = []
         for feature in core.table.ofTitle[title] {
             let affinity = core.profile.affinity[feature]

@@ -157,13 +157,15 @@ struct ProfileTests {
 
     @Test func featureExtraction() throws {
         let title = Fixture.film(
-            "1", genres: ["Драмы", "Драмы", "Криминал"], countries: ["Франция"], year: 1994, minutes: 133,
+            "1", genres: ["Драмы", "Драмы", "Криминал", "Зарубежные"], countries: ["Франция"], year: 1994, minutes: 133,
             directors: [Fixture.person("d", "Люк Бессон")], actors: (1...7).map { Fixture.person("a\($0)", "Актёр \($0)") },
             boards: [BoardRef(id: "c1", kind: .collection, name: "Нуар"), BoardRef(id: "l1", kind: .list, name: "Топ", rank: 3)],
         )
         let table = FeatureTable(titles: [title], weights: .default)
         let keys = Set(table.ofTitle[0].map { table.keys[$0] })
         #expect(keys.contains(FeatureKey(.genre, "драмы")))
+        // «Зарубежные» is a section of the site's catalogue, not a genre of taste.
+        #expect(!keys.contains(FeatureKey(.genre, "зарубежные")))
         #expect(keys.contains(FeatureKey(.decade, "1990")))
         #expect(keys.contains(FeatureKey(.duration, "f150")))
         #expect(keys.contains(FeatureKey(.kind, "film")))
