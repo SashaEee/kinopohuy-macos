@@ -173,6 +173,7 @@ struct MovieSelectionFeature {
     @Dependency(\.defaultDatabase) private var database
     @Dependency(\.appRouter) private var appRouter
     @Dependency(\.dismiss) private var dismiss
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -210,6 +211,9 @@ struct MovieSelectionFeature {
                     }
 
                     await send(.detailsLoaded(result), animation: .easeInOut)
+
+                    // A page read here (not handed over by the title's page) goes into the recommender's catalogue.
+                    if preloaded == nil, case let .success((details, _)) = result { await recommender.captureDetails(details) }
                 }
                 .cancellable(id: CancelID.details, cancelInFlight: true)
 

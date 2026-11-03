@@ -64,6 +64,7 @@ struct BookmarksFeature {
     @Dependency(\.moveBetweenBookmarksUseCase) private var moveBetweenBookmarksUseCase
     @Dependency(\.reorderBookmarksCategoriesUseCase) private var reorderBookmarksCategoriesUseCase
     @Dependency(\.removeFromBookmarksUseCase) private var removeFromBookmarksUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -283,7 +284,7 @@ struct BookmarksFeature {
     }
 
     private func loadMovies(id: Int, state: State, isInitial: Bool) -> Effect<Action> {
-        .run { [filter = state.filter, genre = state.genre.genreCode, page = state.page] send in
+        .run { [filter = state.filter, genre = state.genre.genreCode, page = state.page, folder = state.bookmarks.data?.first { $0.bookmarkId == id }?.name] send in
             let result = await Result {
                 switch filter {
                 case .added:
@@ -296,6 +297,9 @@ struct BookmarksFeature {
             }
 
             await send(.moviesLoaded(isInitial: isInitial, result), animation: .easeInOut)
+
+            // The folder's titles go to the recommender: its name tells «на потом» from favourites.
+            if case let .success(cards) = result, let folder { await recommender.captureBookmarks(cards, folder) }
         }
         .cancellable(id: CancelID.movies, cancelInFlight: true)
     }

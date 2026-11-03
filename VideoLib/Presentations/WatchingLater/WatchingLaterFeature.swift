@@ -349,6 +349,9 @@ struct WatchingLaterFeature {
             let result = await Result { try await getWatchingLaterMoviesUseCase() }
 
             await send(.moviesLoaded(result), animation: .easeInOut)
+
+            // «Досмотреть» as it is now: the recommender's strongest signal about taste.
+            if case let .success(movies) = result { await recommender.captureAccountList(movies) }
         }
         .cancellable(id: CancelID.load, cancelInFlight: true)
     }

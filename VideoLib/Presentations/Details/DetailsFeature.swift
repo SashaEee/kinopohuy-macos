@@ -122,6 +122,10 @@ struct DetailsFeature {
 
                     guard case let .success(details) = result else { return }
 
+                    // The page goes into the recommender's catalogue (no extra request), and the title counts as opened.
+                    await recommender.captureDetails(details)
+                    if let titleId = details.movieId.id { await recommender.markOpened(titleId) }
+
                     let names = [details.nameRussian] + (details.nameOriginal.map { [$0] } ?? [])
                     let trailer = await RutubeTrailers.find(names: names, year: details.displayYear, series: details.series != nil)
                     await send(.trailerLoaded(trailer), animation: .smooth(duration: 0.4))

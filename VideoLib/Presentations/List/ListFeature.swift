@@ -103,6 +103,7 @@ struct ListFeature {
     @Dependency(\.getSoonMoviesInCollectionUseCase) private var getSoonMoviesInCollectionUseCase
     @Dependency(\.getPopularMoviesInCollectionUseCase) private var getPopularMoviesInCollectionUseCase
     @Dependency(\.getWatchingNowMoviesInCollectionUseCase) private var getWatchingNowMoviesInCollectionUseCase
+    @Dependency(\.recommender) private var recommender
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -151,14 +152,34 @@ struct ListFeature {
     }
 
     private func load(_ state: State, isInitial: Bool) -> Effect<Action> {
-        .run { [source = state.source, page = state.page, filterGenre = state.filterGenre, filter = state.filter, newFilter = state.newFilter] send in
+        .run { [source = state.source, page = state.page, filterGenre = state.filterGenre, filter = state.filter, newFilter = state.newFilter, shown = isInitial ? 0 : state.movies.data?.count ?? 0] send in
             let result = await Result {
                 try await movies(source: source, page: page, filterGenre: filterGenre, filter: filter, newFilter: newFilter)
             }
 
             await send(.moviesLoaded(isInitial: isInitial, result), animation: .easeInOut)
+
+            if case let .success((title, cards)) = result {
+                await capture(cards, title: title, source: source, shown: shown)
+            }
         }
         .cancellable(id: CancelID.load, cancelInFlight: true)
+    }
+
+    /// The page's cards go into the recommender's catalogue (no extra request): a ranked list's with their places
+    /// (after the `shown` ones), a collection's as its members, anything else as plain cards.
+    private func capture(_ cards: [MovieSimple], title: String?, source: Source, shown: Int) async {
+        switch source {
+        case let .list(list):
+            await recommender.captureList(cards, list: list, title: title, firstPlace: shown + 1)
+        case let .collection(collection):
+            await recommender.captureCollection(cards, collection: collection)
+        case .movies:
+            // Cards handed over from another screen were captured there.
+            break
+        case .country, .genre, .category:
+            await recommender.captureCards(cards, nil)
+        }
     }
 
     private func movies(source: Source, page: Int, filterGenre: Genres, filter: Filters, newFilter: NewFilters) async throws -> (String?, [MovieSimple]) {
