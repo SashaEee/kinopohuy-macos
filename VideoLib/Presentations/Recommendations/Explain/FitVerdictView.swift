@@ -28,19 +28,25 @@ private struct FitVerdictRow: ViewModifier {
         }
         .animation(.easeOut(duration: 0.25), value: verdict)
         .task(id: titleId) {
-            // Seen it (rated or «Уже смотрел»): «Вам подойдёт?» has nothing to say any more.
-            let rated = await recommender.rating(titleId) != nil
-            let seen = await recommender.activeFeedback(titleId).contains(.seen)
-            if rated || seen {
+            guard await !isRatedOrSeen() else {
                 verdict = nil
                 return
             }
-            verdict = await recommender.fit(titleId)
+            let fit = await recommender.fit(titleId)
+            // Rated or marked seen while it was being worked out (the first one after launch takes a few seconds).
+            guard await !isRatedOrSeen() else { return }
+            verdict = fit
         }
         .onReceive(NotificationCenter.default.publisher(for: .recRatingChanged)) { note in
             guard note.object as? String == titleId else { return }
             verdict = nil
         }
+    }
+
+    /// Seen it (rated or «Уже смотрел»): «Вам подойдёт?» has nothing to say any more.
+    private func isRatedOrSeen() async -> Bool {
+        if await recommender.rating(titleId) != nil { return true }
+        return await recommender.activeFeedback(titleId).contains(.seen)
     }
 }
 

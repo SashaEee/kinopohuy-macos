@@ -418,7 +418,7 @@ struct KPHero<Art: View, Actions: View>: View {
                     }
                 }
                 if let reason, !reason.isEmpty, !isPlaceholder {
-                    KPReasonLine(text: reason)
+                    KPReasonLine(text: reason, truncates: false)
                         .transition(.opacity)
                 }
                 if isPlaceholder || description?.isEmpty == false {
@@ -474,6 +474,9 @@ struct KPHero<Art: View, Actions: View>: View {
 /// capsule, no glow: it reads as part of the page, the way a «№ 1 сегодня» line does.
 struct KPReasonLine: View {
     let text: String
+    /// Cut a long reason with «…» at the edge of the space given (a sheet), rather than letting it run on (the banner,
+    /// where it goes over the picture).
+    var truncates = true
 
     @Environment(\.kpMetrics) private var metrics
 
@@ -488,8 +491,7 @@ struct KPReasonLine: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
-        // Never wider than the space it's given: a long reason is cut with «…» rather than pushing the layout out.
-        .fixedSize(horizontal: false, vertical: true)
+        .fixedSize(horizontal: !truncates, vertical: true)
     }
 }
 

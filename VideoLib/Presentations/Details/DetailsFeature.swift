@@ -212,6 +212,8 @@ struct DetailsFeature {
                     // The site never gives its rating back: a copy here, on the three-level scale, lights the bar.
                     if case .success(.some) = result, let level = SiteRatingMirror.level(for: rating) {
                         await recommender.rate(id, level, .site)
+                        // Rated now: «Вам подойдёт?» steps aside, as it does for «Ваша оценка».
+                        await MainActor.run { NotificationCenter.default.post(name: .recRatingChanged, object: id) }
                         await send(.feedback(.reload))
                     }
 
