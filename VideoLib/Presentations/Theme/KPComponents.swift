@@ -320,11 +320,16 @@ struct KPHero<Art: View, Actions: View>: View {
                         .frame(width: w / 8, height: h / 8)
                         .clipped()
                         .blur(radius: 60 / 8, opaque: true)
-                        .saturation(1.35)
+                        .saturation(1.25)
                         .drawingGroup()
                         .scaleEffect(8)
                         .frame(width: w, height: h)
                         .opacity(0.6)
+                        // The glow lives near the picture; under the text it fades to the background's black, so a dark
+                        // poster doesn't leave a muddy tint there.
+                        .mask {
+                            LinearGradient(stops: KP.easedStops(.black, from: 0.15, to: 1, start: 0.1, end: 0.75), startPoint: .leading, endPoint: .trailing)
+                        }
 
                     art()
                         .scaledToFill()

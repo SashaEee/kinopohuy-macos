@@ -328,6 +328,14 @@ private struct HeroDots: View {
                 .buttonStyle(.plain)
             }
         }
+        // A soft shade under them (no edge): the dots stay readable over a poster's own lettering.
+        .background {
+            Capsule()
+                .fill(.black.opacity(0.45))
+                .padding(.horizontal, -10)
+                .padding(.vertical, -6)
+                .blur(radius: 9)
+        }
         .task(id: "\(index)-\(held)") {
             var reset = Transaction()
             reset.disablesAnimations = true
