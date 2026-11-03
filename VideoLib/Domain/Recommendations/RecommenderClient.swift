@@ -62,6 +62,16 @@ struct RecommenderClient: Sendable {
     var removeFeedback: @Sendable (_ titleId: String, _ kind: FeedbackKind) async -> Void
     var activeFeedback: @Sendable (_ titleId: String) async -> Set<FeedbackKind>
     var override: @Sendable (_ override: TasteOverride) async -> Void
+    var clearOverride: @Sendable (_ feature: FeatureKey) async -> Void
+    var overrides: @Sendable () async -> [TasteOverride]
+
+    // «Уточнить вкус»
+    /// «Что вам близко»: liked features first (pre-selected), then the common genres and countries.
+    var tasteBubbles: @Sendable () async -> [FeatureAffinity]
+    /// After «Нравится» / «Обожаю»: well-known neighbours of that title to rate next.
+    var rateNext: @Sendable (_ titleId: String, _ excluding: Set<String>) async -> [TitleFeatures]
+    /// 0…1, «Вкус изучен на N %».
+    var tasteConfidence: @Sendable () async -> Double
     var recordImpressions: @Sendable (_ titleIds: [String], _ surface: String) async -> Void
     var markOpened: @Sendable (_ titleId: String) async -> Void
     /// A playing session ended (the player calls it on pause, close and end).
@@ -115,6 +125,11 @@ extension RecommenderClient: DependencyKey {
         removeFeedback: { _, _ in },
         activeFeedback: { _ in [] },
         override: { _ in },
+        clearOverride: { _ in },
+        overrides: { [] },
+        tasteBubbles: { [] },
+        rateNext: { _, _ in [] },
+        tasteConfidence: { 0 },
         recordImpressions: { _, _ in },
         markOpened: { _ in },
         logSession: { _ in },

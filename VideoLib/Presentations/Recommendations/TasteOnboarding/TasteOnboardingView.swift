@@ -45,7 +45,7 @@ struct TasteOnboardingView: View {
             .padding(.horizontal, 40)
             .padding(.bottom, 28)
         }
-        .frame(width: 640, height: 660)
+        .frame(width: 680, height: 720)
         .background {
             ZStack(alignment: .top) {
                 KP.bg
@@ -124,39 +124,34 @@ struct TasteOnboardingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 8)
 
-            Image(systemName: "sparkles")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(KP.sunGradient)
-                .frame(width: 64, height: 64)
-                .background(Circle().fill(KP.sun.opacity(0.13)))
-
-            Text(verbatim: store.tasteChips.isEmpty ? "Начнём с вашего" : "Мы уже кое-что знаем")
-                .font(KP.font(26, .heavy))
+            Text(verbatim: "Что вам близко?")
+                .font(KP.font(28, .heavy))
                 .tracking(-0.5)
                 .foregroundStyle(KP.fg)
-                .padding(.top, 18)
 
-            Text(verbatim: store.tasteChips.isEmpty
-                ? "Вкус собирается из «Досмотреть» и просмотров на этом Mac. Отметьте несколько своих тайтлов — подборка сразу станет точнее."
-                : "По списку «Досмотреть» и просмотрам на этом Mac. Всё хранится только здесь.")
+            Text(verbatim: store.bubbles.contains { $0.likedByData }
+                ? "Отмечено то, что мы поняли по вашим просмотрам. Нажмите, чтобы добавить или убрать; правый клик — «Не моё»."
+                : "Отметьте, что любите; правый клик — «Не моё». Всё хранится только на этом Mac.")
                 .font(KP.font(14, .medium))
                 .foregroundStyle(KP.fg55)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 460)
+                .frame(maxWidth: 480)
                 .padding(.top, 8)
 
-            if !store.tasteChips.isEmpty {
-                FlowLayout(spacing: 8) {
-                    ForEach(Array(store.tasteChips.enumerated()), id: \.offset) { index, chip in
-                        TasteChip(title: chip)
-                            .transition(.scale(scale: 0.8).combined(with: .opacity))
-                            .animation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.04), value: store.tasteChips)
+            FlowLayout(spacing: 9) {
+                ForEach(Array(store.bubbles.enumerated()), id: \.element.id) { index, bubble in
+                    TasteBubble(bubble: bubble) {
+                        store.send(.bubbleTapped(bubble.feature), animation: .spring(response: 0.32, dampingFraction: 0.7))
+                    } notForMe: {
+                        store.send(.bubbleNotForMe(bubble.feature), animation: .spring(response: 0.32, dampingFraction: 0.7))
                     }
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .animation(.spring(response: 0.45, dampingFraction: 0.72).delay(Double(index) * 0.025), value: store.bubbles.count)
                 }
-                .frame(maxWidth: 500)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 22)
             }
+            .frame(maxWidth: 560)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 24)
 
             if let counts = store.countsLine {
                 Text(verbatim: counts)
@@ -170,13 +165,13 @@ struct TasteOnboardingView: View {
             Button {
                 store.send(.startTapped, animation: .spring(response: 0.42, dampingFraction: 0.88))
             } label: {
-                Text(verbatim: store.stack.isEmpty ? "Дальше" : "Уточнить за минуту")
+                Text(verbatim: store.stack.isEmpty ? "Дальше" : "Оценить пару тайтлов")
             }
             .buttonStyle(KPSheetButtonStyle(primary: true, width: 260))
             .keyboardShortcut(.defaultAction)
 
             if !store.stack.isEmpty {
-                Text(verbatim: "\(store.stack.count) \(RussianPlural.form(store.stack.count, "ваш тайтл", "ваших тайтла", "ваших тайтлов")): одна клавиша на каждый")
+                Text(verbatim: "Ваши тайтлы, по одной клавише на каждый — остановиться можно когда угодно")
                     .font(KP.font(12, .medium))
                     .foregroundStyle(KP.fg38)
                     .padding(.top, 8)
@@ -199,13 +194,18 @@ struct TasteOnboardingView: View {
 
     private var stack: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Text(verbatim: TasteOnboardingRules.counter(index: store.index, total: store.stack.count))
-                    .font(KP.font(13, .semibold).monospacedDigit())
-                    .foregroundStyle(KP.fg70)
-                    .contentTransition(.numericText(value: Double(store.index)))
-                StackProgress(total: store.stack.count, done: store.index)
-                    .frame(maxWidth: 260)
+            // How well the taste is known, not how many cards are left: the deck grows as you go.
+            VStack(spacing: 7) {
+                HStack(spacing: 6) {
+                    Text(verbatim: "Вкус изучен на")
+                        .foregroundStyle(KP.fg55)
+                    Text(verbatim: "\(Int((store.confidence * 100).rounded())) %")
+                        .foregroundStyle(KP.fg)
+                        .contentTransition(.numericText(value: store.confidence))
+                }
+                .font(KP.font(13, .semibold).monospacedDigit())
+                StackProgress(total: 1000, done: Int(store.confidence * 1000))
+                    .frame(width: 260)
             }
             .padding(.top, 6)
 
@@ -244,7 +244,7 @@ struct TasteOnboardingView: View {
                 choose(.dontRemember)
             } label: {
                 HStack(spacing: 6) {
-                    Text(verbatim: "Не помню")
+                    Text(verbatim: "Не смотрел")
                     Text(verbatim: "0 · ↓")
                         .font(KP.font(11, .semibold).monospacedDigit())
                         .foregroundStyle(KP.fg38)
@@ -258,6 +258,12 @@ struct TasteOnboardingView: View {
             .buttonStyle(.plain)
             .keyboardShortcut("0", modifiers: [])
             .padding(.top, 10)
+
+            if !store.preview.isEmpty {
+                RecommendationPreview(titles: store.preview)
+                    .padding(.top, 14)
+                    .transition(.opacity)
+            }
         }
         .background {
             // The arrows, as the buttons' second keys.
@@ -570,6 +576,73 @@ private struct TasteChip: View {
             .padding(.vertical, 7)
             .background(Capsule().fill(KP.chip))
             .overlay(Capsule().strokeBorder(KP.sun.opacity(0.25), lineWidth: 1))
+    }
+}
+
+/// A bubble of «Что вам близко?»: chosen is white, «Не моё» is struck through, the rest a quiet chip; the stronger the
+/// data says it's liked, the larger. A click chooses or unchooses; a right click is «Не моё».
+private struct TasteBubble: View {
+    let bubble: TasteOnboardingFeature.State.Bubble
+    let toggle: () -> Void
+    let notForMe: () -> Void
+
+    @State private var hover = false
+
+    var body: some View {
+        let size = 13.5 + 3.5 * bubble.strength
+        Button(action: toggle) {
+            HStack(spacing: 6) {
+                if bubble.state == .liked {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: size - 4, weight: .heavy))
+                        .transition(.scale.combined(with: .opacity))
+                } else if bubble.state == .notForMe {
+                    Image(systemName: "nosign")
+                        .font(.system(size: size - 3, weight: .semibold))
+                        .transition(.scale.combined(with: .opacity))
+                }
+                Text(verbatim: bubble.name)
+                    .strikethrough(bubble.state == .notForMe, color: KP.fg38)
+            }
+            .font(KP.font(size, .semibold))
+            .foregroundStyle(bubble.state == .liked ? KP.ink : bubble.state == .notForMe ? KP.fg38 : KP.fg)
+            .padding(.horizontal, 12 + 4 * bubble.strength)
+            .padding(.vertical, 7 + 2 * bubble.strength)
+            .background(Capsule().fill(bubble.state == .liked ? KP.fg : hover ? KP.chipStrong : KP.chip))
+            .scaleEffect(hover ? 1.04 : 1)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .animation(.snappy(duration: 0.15), value: hover)
+        .contextMenu {
+            Button(bubble.state == .notForMe ? "Вернуть" : "Не моё", action: notForMe)
+        }
+        .help(bubble.state == .notForMe ? "Не моё — правый клик, чтобы вернуть" : "Нажмите, чтобы \(bubble.state == .liked ? "убрать" : "добавить"); правый клик — «Не моё»")
+    }
+}
+
+/// «Сейчас мы бы посоветовали»: the first of «Для вас» as things stand, a row of small posters that changes as you
+/// answer — the proof that every answer counts.
+private struct RecommendationPreview: View {
+    let titles: [TitleFeatures]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(verbatim: "Сейчас мы бы посоветовали")
+                .font(KP.font(12, .semibold))
+                .foregroundStyle(KP.fg38)
+            HStack(spacing: 8) {
+                ForEach(titles.prefix(8)) { title in
+                    KPRemoteImage(url: title.poster, downsample: CGSize(width: 96, height: 144))
+                        .frame(width: 44, height: 66)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .help(title.name)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+            }
+            .animation(.smooth(duration: 0.4), value: titles.map(\.id))
+        }
     }
 }
 

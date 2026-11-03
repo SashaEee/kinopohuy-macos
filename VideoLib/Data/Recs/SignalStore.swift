@@ -90,6 +90,28 @@ struct SignalStore: Sendable {
         }
     }
 
+    func clearOverride(_ feature: FeatureKey) async {
+        _ = try? await database.write { db in
+            try db.execute(sql: "DELETE FROM taste_override WHERE feature = ?", arguments: [feature.description])
+        }
+    }
+
+    /// The overrides in force.
+    func overrides(now: Date = .now) async -> [TasteOverride] {
+        (try? await database.read { db in
+            try Row.fetchAll(
+                db,
+                sql: "SELECT feature, mode, until FROM taste_override WHERE until IS NULL OR until > ?",
+                arguments: [now.timeIntervalSince1970],
+            ).compactMap { row -> TasteOverride? in
+                let feature: String = row["feature"]
+                let mode: String = row["mode"]
+                guard let key = Self.featureKey(feature), let mode = TasteOverride.Mode(rawValue: mode) else { return nil }
+                return TasteOverride(feature: key, mode: mode, until: row["until"])
+            }
+        }) ?? []
+    }
+
     // MARK: Impressions
 
     func recordImpressions(_ titleIds: [String], surface: String, now: Date = .now) async {

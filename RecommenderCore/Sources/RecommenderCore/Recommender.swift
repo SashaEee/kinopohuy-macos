@@ -6,7 +6,7 @@ import Foundation
 public enum Recommender {
     /// Raised whenever the engine's logic or default weights change: pages built by an older engine are rebuilt
     /// rather than shown from the cache.
-    public static let version = 4
+    public static let version = 5
 
     public static func prepare(_ input: EngineInput) -> PreparedEngine {
         PreparedEngine(input: input)

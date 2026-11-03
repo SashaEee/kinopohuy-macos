@@ -218,6 +218,15 @@ extension RecommenderClient {
             await runtime.signals.setOverride(override)
             await runtime.engine.rebuildNow()
         },
+        clearOverride: { feature in
+            let runtime = RecRuntime.shared
+            await runtime.signals.clearOverride(feature)
+            await runtime.engine.rebuildNow()
+        },
+        overrides: { await RecRuntime.shared.signals.overrides() },
+        tasteBubbles: { await RecRuntime.shared.engine.tasteBubbles() },
+        rateNext: { titleId, excluding in await RecRuntime.shared.engine.rateNext(after: titleId, excluding: excluding) },
+        tasteConfidence: { await RecRuntime.shared.engine.tasteConfidence() },
         recordImpressions: { titleIds, surface in await RecRuntime.shared.signals.recordImpressions(titleIds, surface: surface) },
         markOpened: { titleId in await RecRuntime.shared.signals.markOpened(titleId) },
         logSession: { session in

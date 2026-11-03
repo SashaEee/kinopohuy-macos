@@ -123,3 +123,56 @@ struct EngineEndToEndTests {
         #expect(elapsed < 8, "took \(elapsed) s")
     }
 }
+
+/// «Уточнить вкус»: bubbles, the next titles after a liked one, the confidence meter.
+@Suite("Taste setup")
+struct TasteSetupTests {
+    @Test func bubblesStartWithWhatIsLikedAndSkipSiteSections() {
+        let engine = Recommender.prepare(EngineEndToEndTests.input)
+        let bubbles = engine.tasteBubbles(limit: 18)
+        #expect(bubbles.count <= 18)
+        #expect(!bubbles.isEmpty)
+        #expect(bubbles.first.map { $0.affinity > 0 } == true)
+        #expect(Set(bubbles.map(\.feature)).count == bubbles.count)
+        #expect(!bubbles.contains { $0.name.lowercased() == "зарубежные" })
+    }
+
+    @Test func rateNextOffersUnratedNeighboursOnly() {
+        let input = EngineEndToEndTests.input
+        let engine = Recommender.prepare(input)
+        let rated = Set(input.signals.ratings.map(\.titleId))
+        guard let liked = input.titles.first(where: { !$0.watchAlso.isEmpty })?.id else { return }
+        let next = engine.rateNext(after: liked, excluding: [liked], limit: 3)
+        #expect(next.count <= 3)
+        #expect(!next.contains(liked))
+        #expect(next.allSatisfy { !rated.contains($0) })
+        #expect(next == engine.rateNext(after: liked, excluding: [liked], limit: 3))
+    }
+
+    /// Most accounts play from «Досмотреть» on the TV or the site and mark nothing: those titles still make a deck.
+    @Test func stackFromTitlesPlayedElsewhere() {
+        let titles = (1...6).map { Fixture.film("f\($0)") } + (1...6).map { Fixture.series("s\($0)") }
+        var signals = UserSignals()
+        signals.accountList = titles.enumerated().map { offset, title in
+            AccountListItem(
+                titleId: title.id, watched: false, lastActivityAt: Fixture.now - Double(offset) * Fixture.day,
+                season: title.isSeries ? 2 : nil, episode: title.isSeries ? 3 : nil,
+            )
+        }
+        let stack = Recommender.prepare(Fixture.input(titles: titles, signals: signals)).onboardingStack(count: 12)
+        #expect(stack.count >= 10)
+        #expect(stack.contains { $0.hasPrefix("s") })
+        #expect(stack.contains { $0.hasPrefix("f") })
+    }
+
+    @Test func confidenceGrowsWithRatings() {
+        var input = EngineEndToEndTests.input
+        input.signals.ratings = []
+        let before = Recommender.prepare(input).tasteConfidence()
+        input.signals.ratings = input.titles.prefix(10).map { ExplicitRating(titleId: $0.id, level: 1, source: .onboarding, createdAt: Fixture.now) }
+        let after = Recommender.prepare(input).tasteConfidence()
+        #expect(before <= 0.35 + 1e-9)
+        #expect(after > before)
+        #expect(after <= 1)
+    }
+}

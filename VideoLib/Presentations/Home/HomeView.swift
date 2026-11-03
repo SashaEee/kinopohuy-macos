@@ -151,6 +151,14 @@ struct HomeView: View {
         .dialogSeverity(.critical)
         // «Уточнить вкус» from the learning card, and the stack offered once on its own when it's worth it.
         .kpTasteOnboardingSheet(isPresented: $tastePresented)
+        #if DEBUG
+            // KP_TASTE: «Уточнить вкус» at launch (to look at it).
+            .task {
+                guard ProcessInfo.processInfo.environment["KP_TASTE"] != nil else { return }
+                try? await Task.sleep(for: .seconds(2))
+                tastePresented = true
+            }
+        #endif
         .kpTasteOnboardingOffer(after: .seconds(4))
         .kpScreenBackground()
     }
