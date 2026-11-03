@@ -7,7 +7,7 @@
 
 ### Кино на Mac. Без лишнего.
 
-Нативное приложение онлайн-кинотеатра для macOS: каталог как у больших стримингов, свой плеер с экраном паузы, загрузки и автообновления.<br>
+Нативное приложение онлайн-кинотеатра для macOS: каталог как у больших стримингов, рекомендации, которые объясняют себя, свой плеер с экраном паузы, загрузки и автообновления.<br>
 Неофициальное: видео не размещает, адрес сайта вы вводите сами.
 
 [![Версия](https://img.shields.io/github/v/release/SashaEee/kinopohuy-macos?label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=FF7A00)](https://github.com/SashaEee/kinopohuy-macos/releases/latest)
@@ -39,7 +39,7 @@
 - **Нативное, а не вкладка браузера.** SwiftUI, плавная прокрутка, клавиатура и медиаклавиши, отдельное окно плеера.
 - **Плеер, который приятно ставить на паузу.** Через несколько секунд паузы появляются название, серия, озвучка и описание, как на большом стриминге.
 - **Всё в один клик.** «Продолжить просмотр» открывает плеер сразу с того места, где вы остановились.
-- **Само подберёт, что посмотреть.** Рекомендации считаются на вашем Mac по тому, что вы смотрите и как оцениваете, и каждая объясняет, почему она здесь.
+- **Само подберёт, что посмотреть.** «Сегодня вечером» на главной, ряды «Для вас» и «Выбери за меня» по <kbd>⌘</kbd> <kbd>J</kbd>: по тому, что вы смотрите и как оцениваете, по сюжету и по вкусам похожих зрителей. Каждый совет говорит, почему он здесь, и считается на вашем Mac. <sup>с версии 2.1</sup>
 - **Ни телеметрии, ни трекеров.** Открытый код. Приложение можно собрать самому одной командой.
 
 ## Как это выглядит
@@ -62,7 +62,7 @@
 <td width="50%" valign="top">
 
 **Главная и каталог**
-- Большая заставка: сначала подобранное для вас на этот вечер, потом тренды.
+- Большая заставка с трендами, а с версии 2.1 сначала подобранное для вас на этот вечер.
 - «Продолжить просмотр»: где вы остановились, а для начатого на этом Mac — полоска прогресса и «Осталось N мин».
 - «Новые серии» по вашим сериалам и ряд «Похоже на…».
 - Каталог с фильтрами, подборки, поиск по мере набора.
@@ -75,7 +75,8 @@
 - Озвучки прямо на странице, с долей зрителей и пометками сайта.
 - Сезоны и серии плитками: просмотренные отмечены, у начатых прогресс.
 - «Продолжить с 12:34» или «С начала», время окончания фильма.
-- Расписание серий, трейлеры, актёры, оценки, комментарии.
+- Расписание серий, трейлеры, актёры, комментарии.
+- Оценки IMDb и Кинопоиска, а с версии 2.1 ещё Rotten Tomatoes и Metacritic.
 
 </td>
 </tr>
@@ -97,24 +98,25 @@
 - Компактная раскладка для MacBook Air и Pro 14″: первый ряд постеров виден сразу.
 - Мастер первого запуска и настройки (<kbd>⌘</kbd> <kbd>,</kbd>).
 - Автообновление через Sparkle, каждое обновление проверяется подписью.
-- Приложение обращается только к сайту, адрес которого вы указали (и к серверам, с которых он отдаёт видео и картинки), к GitHub (лента и файлы обновлений) и к Rutube за трейлерами.
+- Приложение обращается только к сайту, адрес которого вы указали (и к серверам, с которых он отдаёт видео и картинки), к GitHub (лента и файлы обновлений) и к Rutube за трейлерами. Данные для рекомендаций лежат внутри приложения.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Рекомендации**
-- Ряды «Для вас», «Потому что вы смотрите «…»», «Подборки для вас», «Вы могли пропустить», «Можно начать».
+**Рекомендации** <sup>с версии 2.1</sup>
+- Заставка «Сегодня вечером» и ряды «Для вас», «Потому что вы смотрите «…»», «Подборки для вас», «Можно начать».
+- Советы по связям сайта, жанрам и людям, по сюжету (описания сравнивает встроенная в macOS языковая модель) и по вкусам зрителей с похожими оценками.
 - У каждого совета причина и «Почему это?» с кнопками «Меньше такого» и «Не учитывать».
-- «Не моё», «Нравится», «Обожаю» на странице тайтла и правым кликом по постеру; «Вам подойдёт?» для любого тайтла.
-- «Уточнить вкус»: отметьте, что близко, оцените пару своих тайтлов — советы меняются на глазах.
-- Всё считается и хранится на этом Mac; фоновое чтение каталога сайта можно ограничить или выключить.
+- «Не моё», «Нравится», «Обожаю» на странице и правым кликом по постеру. Оценённый фильм считается просмотренным: уходит из «Продолжить просмотр» и отмечается на сайте.
+- «Уточнить вкус» за минуту: что вам близко, пара своих тайтлов, «Что хочется посмотреть?». Советы меняются на глазах.
+- Импорт оценок из IMDb и Letterboxd (CSV).
 
 </td>
 <td width="50%" valign="top">
 
-**«Выбери за меня»** (<kbd>⌘</kbd> <kbd>J</kbd>)
+**«Выбери за меня»** (<kbd>⌘</kbd> <kbd>J</kbd>) <sup>с версии 2.1</sup>
 - Готовый вариант сразу, с учётом дня недели и времени, и ещё два «Или».
 - Скажите словами (<kbd>⌘</kbd> <kbd>K</kbd>): «лёгкое на полтора часа, смотрим вдвоём», «как «Мост», но короче», «без ужасов».
 - «Полегче», «Помрачнее», «Покороче», «Поновее» поправят выбор, «Другое» покажет следующий.
@@ -168,6 +170,19 @@ xattr -dr com.apple.quarantine "/Applications/КиноПохуй.app"
 <summary><b>Это безопасно?</b></summary>
 
 Весь код открыт, и приложение можно собрать самому. Аналитики, трекеров и сбора данных нет. Места просмотра и история хранятся на этом Mac; если вы вошли в аккаунт, сайт, как и в браузере, тоже запоминает, что вы смотрели. Логин и пароль уходят только на сайт, приложение хранит лишь cookies сессии, как браузер.
+</details>
+
+<details>
+<summary><b>Как работают рекомендации и что они о вас знают?</b></summary>
+
+Всё считается на этом Mac, на серверы проекта ничего не уходит (их и нет). Вкус складывается из «Досмотреть» в аккаунте, истории просмотров на этом Mac, ваших оценок и, если хотите, импорта из IMDb или Letterboxd. Советы приходят из нескольких источников:
+- связи на сайте («Смотрите также», списки, подборки, франшизы);
+- жанры, страны, режиссёры и актёры, которые вам нравятся;
+- похожие по сюжету (описания сравнивает встроенная в macOS языковая модель);
+- что нравится зрителям с похожими вкусами;
+- оценки критиков из Викиданных.
+
+Чтобы знать о фильмах больше, чем видно в рядах, приложение в фоне читает страницы сайта под вашим аккаунтом: по одной, не чаще раза в 3 секунды и не больше 300 в день. Сайт видит эти открытия так же, как если бы вы листали сами. Лимит меняется или выключается в Настройках → «Рекомендации»; там же «Сбросить вкус», «Очистить данные рекомендаций» и «Экспорт…».
 </details>
 
 <details>
@@ -244,6 +259,8 @@ cd kinopohuy-macos
 ./build-mac.sh    # соберёт Release для этого Mac и установит /Applications/КиноПохуй.app
 ```
 
+Пакет открытых данных для рекомендаций (оценки критиков, связи фильмов) собирается скриптами из [`scripts/datapack`](scripts/datapack); без него приложение работает, только без этих оценок и советов зрителей. Движок рекомендаций — отдельный Swift-пакет [`RecommenderCore`](RecommenderCore) с тестами (`swift test`).
+
 Или откройте `VideoLib.xcodeproj` в Xcode, выберите схему `VideoLib` и нажмите Run. `VideoLib` — внутреннее имя проекта, приложение называется «КиноПохуй». Как устроен код и как прислать изменения — в [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Отказ от ответственности
@@ -263,6 +280,7 @@ cd kinopohuy-macos
 - Проект вырос из открытого кода voidboost (MIT, © 2025 voidboost). Спасибо автору: его уведомление об авторских правах сохранено в [LICENSE](LICENSE).
 - [aria2](https://github.com/aria2/aria2) 1.37.0 — встроенный загрузчик, GNU GPL v2 или новее. Собран из официального архива скриптом [`scripts/aria2/build.sh`](scripts/aria2/build.sh); архив с исходниками приложен к каждому релизу.
 - [Inter](https://github.com/rsms/inter) — шрифт интерфейса, SIL Open Font License 1.1.
+- [Викиданные](https://www.wikidata.org) — оценки Rotten Tomatoes и Metacritic, соответствия IMDb и Кинопоиска (CC0), выгружены через [QLever](https://qlever.dev) Фрайбургского университета.
 - Пакеты Swift: [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) и другие библиотеки Point-Free, [Alamofire](https://github.com/Alamofire/Alamofire), [Kingfisher](https://github.com/onevcat/Kingfisher), [GRDB](https://github.com/groue/GRDB.swift), [SQLiteData](https://github.com/pointfreeco/sqlite-data), [Sparkle](https://github.com/sparkle-project/Sparkle), [SwiftSoup](https://github.com/scinfu/SwiftSoup), [Pow](https://github.com/EmergeTools/Pow), [Defaults](https://github.com/sindresorhus/Defaults), [SwiftUI-Flow](https://github.com/tevelee/SwiftUI-Flow), [LRUCache](https://github.com/nicklockwood/LRUCache), [Swift Collections](https://github.com/apple/swift-collections), [Swift Algorithms](https://github.com/apple/swift-algorithms).
 
 Полный список с версиями и текстами лицензий — в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) и в самом приложении: **О программе → Лицензии**.
@@ -271,6 +289,6 @@ cd kinopohuy-macos
 
 ## English
 
-**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (with a «pick for me» that understands plain Russian), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
+**KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (site links, plot similarity via macOS's built-in language model, taste-alike viewers, critics' scores from Wikidata; a «pick for me» that understands plain Russian; coming in 2.1), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
 
 macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project on [Boosty](https://boosty.to/sanchella_zzz) or with USDT on TON (address above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).
