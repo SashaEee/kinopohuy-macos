@@ -21,6 +21,12 @@ struct RecSnapshot: Equatable, Sendable {
     }
 }
 
+/// The critics' scores the data pack has for a title.
+struct CriticScores: Equatable, Sendable {
+    var rottenTomatoes: Int?
+    var metacritic: Int?
+}
+
 /// How far the local catalogue has got (Settings → «Рекомендации» → «Изучение каталога»).
 struct RecStatus: Equatable, Sendable {
     /// Titles known at all (cards and pages).
@@ -72,6 +78,9 @@ struct RecommenderClient: Sendable {
     var interestGrid: @Sendable () async -> [TitleFeatures]
     /// 0…1, «Вкус изучен на N %».
     var tasteConfidence: @Sendable () async -> Double
+    /// Rotten Tomatoes (critics, %) and Metacritic (0–100) for a title page, from the data pack, by its IMDb id or its
+    /// Kinopoisk id.
+    var critics: @Sendable (_ imdbId: String?, _ kpId: Int?) async -> CriticScores?
     var recordImpressions: @Sendable (_ titleIds: [String], _ surface: String) async -> Void
     var markOpened: @Sendable (_ titleId: String) async -> Void
     /// A playing session ended (the player calls it on pause, close and end).
@@ -130,6 +139,7 @@ extension RecommenderClient: DependencyKey {
         tasteBubbles: { [] },
         interestGrid: { [] },
         tasteConfidence: { 0 },
+        critics: { _, _ in nil },
         recordImpressions: { _, _ in },
         markOpened: { _ in },
         logSession: { _ in },

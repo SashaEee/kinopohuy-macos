@@ -155,7 +155,18 @@ actor RecsPack {
         return (enriched, result)
     }
 
-    /// The critics' scores for one IMDb id (the title page's chips).
+    /// The critics' scores for a title page: by its IMDb id, else its Kinopoisk id.
+    func critics(imdb: Int?, kp: Int?) async -> Facts? {
+        if let imdb { return await critics(imdb: imdb) }
+        guard let kp, let database else { return nil }
+        let found = try? await database.read { db in
+            try Int.fetchOne(db, sql: "SELECT imdb FROM title WHERE kp = ?", arguments: [kp])
+        }
+        guard let found else { return nil }
+        return await critics(imdb: found)
+    }
+
+    /// The critics' scores for one IMDb id.
     func critics(imdb: Int) async -> Facts? {
         if let known = facts[imdb] { return known }
         guard let database else { return nil }

@@ -500,6 +500,10 @@ struct DetailsComponentView: View {
                                 if let r = details.imdbRating { RatingLink(source: "IMDb", rating: r) }
                                 if let r = details.kpRating { RatingLink(source: "КиноПоиск", rating: r) }
                                 if let r = details.waRating { RatingLink(source: "World Art", rating: r) }
+                                CriticChips(
+                                    imdbId: RecParsing.imdbId(fromLink: details.imdbRating?.link),
+                                    kpId: RecParsing.kinopoiskId(fromLink: details.kpRating?.link)
+                                )
                             }
                         }
                     }
@@ -743,6 +747,45 @@ private struct RatingLink: View {
         }
         .buttonStyle(.plain)
         .help("Голосов: \(rating.votesCount)")
+    }
+}
+
+/// Rotten Tomatoes (the critics' Tomatometer) and Metacritic beside the site's ratings, when the data pack knows the
+/// title: fresh (60 % and up) in red, rotten in green-grey, as on the sites themselves; Metacritic by its own colours.
+private struct CriticChips: View {
+    let imdbId: String?
+    let kpId: Int?
+
+    @State private var scores: CriticScores?
+    @Environment(\.kpMetrics) private var metrics
+    @Dependency(\.recommender) private var recommender
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let rt = scores?.rottenTomatoes {
+                chip("RT", "\(rt) %", color: rt >= 60 ? Color(red: 0.98, green: 0.32, blue: 0.24) : Color(red: 0.56, green: 0.74, blue: 0.36))
+                    .help("Rotten Tomatoes: доля положительных рецензий критиков (Викиданные)")
+            }
+            if let mc = scores?.metacritic {
+                chip("Metacritic", "\(mc)", color: mc >= 61 ? Color(red: 0.4, green: 0.8, blue: 0.2) : mc >= 40 ? Color(red: 1, green: 0.8, blue: 0.2) : Color(red: 1, green: 0.35, blue: 0.35))
+                    .help("Metacritic: средняя оценка критиков (Викиданные)")
+            }
+        }
+        .task(id: "\(imdbId ?? "")|\(kpId ?? 0)") {
+            guard imdbId != nil || kpId != nil else { return }
+            scores = await recommender.critics(imdbId, kpId)
+        }
+    }
+
+    private func chip(_ source: String, _ value: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(verbatim: source).foregroundStyle(KP.fg55)
+            Text(verbatim: value).foregroundStyle(color)
+        }
+        .font(KP.font(metrics.compact ? 12.5 : 13, .semibold))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(KP.chip))
     }
 }
 

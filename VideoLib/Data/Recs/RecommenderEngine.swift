@@ -145,6 +145,11 @@ actor RecommenderEngine {
         return await pack.suggestions(seeds: prepared.tasteSeeds(), excluding: looked, limit: limit)
     }
 
+    /// Rotten Tomatoes and Metacritic for a title page (from the data pack).
+    func critics(imdbId: String?, kpId: Int?) async -> RecsPack.Facts? {
+        await pack.critics(imdb: imdbId.flatMap { Int($0.dropFirst(2)) }, kp: kpId)
+    }
+
     /// «Вкус изучен на N %».
     func tasteConfidence() async -> Double {
         await ensurePrepared()?.tasteConfidence() ?? 0

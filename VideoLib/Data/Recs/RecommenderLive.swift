@@ -228,6 +228,10 @@ extension RecommenderClient {
         tasteBubbles: { await RecRuntime.shared.engine.tasteBubbles() },
         interestGrid: { await RecRuntime.shared.engine.interestGrid() },
         tasteConfidence: { await RecRuntime.shared.engine.tasteConfidence() },
+        critics: { imdbId, kpId in
+            guard let facts = await RecRuntime.shared.engine.critics(imdbId: imdbId, kpId: kpId), facts.rt != nil || facts.mc != nil else { return nil }
+            return CriticScores(rottenTomatoes: facts.rt, metacritic: facts.mc)
+        },
         recordImpressions: { titleIds, surface in await RecRuntime.shared.signals.recordImpressions(titleIds, surface: surface) },
         markOpened: { titleId in await RecRuntime.shared.signals.markOpened(titleId) },
         logSession: { session in
