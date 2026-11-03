@@ -22,6 +22,8 @@ struct WatchingLaterFeature {
         var segments: [String: WatchingSegment] = [:]
         /// Titles taken off the row («Убрать из ряда») or dropped («Бросил»), by number.
         var setAside: Set<String> = []
+        /// Films rated here (or «Уже смотрел»): under «Досмотрено» before the site says so.
+        var done: Set<String> = []
         /// This Mac's history, for how far a film got and when it last played.
         var history = KPWatchHistory()
 
@@ -72,7 +74,7 @@ struct WatchingLaterFeature {
         /// A segment pill; the chosen one again clears it.
         case segmentSelected(WatchingSegment)
         case historyChanged(KPWatchHistory)
-        case setAsideLoaded(Set<String>)
+        case setAsideLoaded(ContinueStatus)
         /// «Убрать из ряда», «Это смотрел не я», «Не моё» from a card (recorded by the card's marks).
         case titleAction(MovieWatchLater, TitleAction)
         /// «Вернуть» on a card: it's back in its segment.
@@ -165,8 +167,9 @@ struct WatchingLaterFeature {
 
                 return .none
 
-            case let .setAsideLoaded(ids):
-                state.setAside = ids
+            case let .setAsideLoaded(status):
+                state.setAside = status.setAside
+                state.done = status.done
                 classify(&state)
 
                 return .none
@@ -316,7 +319,7 @@ struct WatchingLaterFeature {
                 return min(1, entry.position / entry.duration)
             }
             let facts = WatchingFacts(
-                watched: movie.watched,
+                watched: movie.watched || (id.map(state.done.contains) ?? false),
                 lastActivity: [playedAt, siteDate].compactMap { $0 }.max(),
                 isSeries: movie.isSeries,
                 season: place?.season,
@@ -333,13 +336,8 @@ struct WatchingLaterFeature {
     /// Which titles were taken off the row or dropped, read from the recommender.
     private func loadSetAside(_ movies: [MovieWatchLater]) -> Effect<Action> {
         .run { send in
-            var ids: Set<String> = []
-            for movie in movies {
-                guard let id = movie.watchLaterId.id else { continue }
-                let marks = await recommender.activeFeedback(id)
-                if marks.contains(.continueHidden) || marks.contains(.dropped) { ids.insert(id) }
-            }
-            await send(.setAsideLoaded(ids), animation: .smooth(duration: 0.3))
+            let items = movies.compactMap { movie in movie.watchLaterId.id.map { ContinueItem(titleId: $0, isSeries: movie.isSeries) } }
+            await send(.setAsideLoaded(await recommender.continueStatus(items)), animation: .smooth(duration: 0.3))
         }
         .cancellable(id: CancelID.setAside, cancelInFlight: true)
     }

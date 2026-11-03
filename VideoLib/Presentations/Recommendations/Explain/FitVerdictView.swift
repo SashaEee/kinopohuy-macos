@@ -4,7 +4,7 @@ import SwiftUI
 
 /// «Вам подойдёт?» on a title's page: «Скорее да / 50 на 50 / Скорее нет» with two pluses and a minus in the user's
 /// terms («+ детектив — ваш жанр № 1 · − 2 ч 38 мин»). No percentages. Nothing shows until the recommender knows enough
-/// about the user and the title.
+/// about the user and the title, and nothing once it's rated or marked seen.
 struct FitVerdictView: View {
     let titleId: String
     /// A title page's fact row: its label in the page's left column («Вам подойдёт?»), shown only with a verdict.
@@ -31,7 +31,18 @@ struct FitVerdictView: View {
         }
         .animation(.easeOut(duration: 0.25), value: verdict)
         .task(id: titleId) {
+            // Seen it (rated or «Уже смотрел»): «Вам подойдёт?» has nothing to say any more.
+            let rated = await recommender.rating(titleId) != nil
+            let seen = await recommender.activeFeedback(titleId).contains(.seen)
+            if rated || seen {
+                verdict = nil
+                return
+            }
             verdict = await recommender.fit(titleId)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .recRatingChanged)) { note in
+            guard note.object as? String == titleId else { return }
+            verdict = nil
         }
     }
 
@@ -78,4 +89,9 @@ struct FitVerdictView: View {
         case .unlikely: KP.fg55
         }
     }
+}
+
+extension Notification.Name {
+    /// A title was rated or marked seen on its page (the object is its id): what asks «подойдёт?» steps aside.
+    static let recRatingChanged = Notification.Name("recRatingChanged")
 }

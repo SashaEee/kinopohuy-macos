@@ -91,6 +91,7 @@ struct FeedbackBarFeature {
                     .run { _ in
                         if let level {
                             await recommender.rate(titleId, level.level, .app)
+                            await MainActor.run { NotificationCenter.default.post(name: .recRatingChanged, object: titleId) }
                         } else {
                             await recommender.clearRating(titleId)
                             // A card dimmed «Больше не покажем» in this session shouldn't say so any more.
@@ -110,7 +111,12 @@ struct FeedbackBarFeature {
                 state.isLoaded = true
                 let record: Effect<Action> = .merge(
                     .cancel(id: CancelID.load),
-                    .run { _ in await recommender.feedback(titleId, kind) }
+                    .run { _ in
+                        await recommender.feedback(titleId, kind)
+                        if kind == .seen {
+                            await MainActor.run { NotificationCenter.default.post(name: .recRatingChanged, object: titleId) }
+                        }
+                    }
                 )
 
                 guard kind == .seen, state.level == nil else { return record }

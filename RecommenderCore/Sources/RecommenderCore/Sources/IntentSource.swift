@@ -1,7 +1,7 @@
 import Foundation
 
 /// S3: what the user meant to watch — bookmarks without progress (with the folder's name), «Досмотреть» items not
-/// started yet, followed series not begun (§4.5). Taste orders them within the source.
+/// started yet, followed series not begun, «Хочу посмотреть» from «Уточнить вкус» (§4.5). Taste orders them within the source.
 enum IntentSource {
     static func ranking(_ core: EngineCore) -> SourceRanking {
         SourceRanking(kind: .intent, hits: hits(core))
@@ -18,6 +18,8 @@ enum IntentSource {
                 evidence = Evidence(origin: .accountList)
             } else if signal.followed {
                 evidence = Evidence(origin: .followed)
+            } else if signal.interested {
+                evidence = Evidence(origin: .interest)
             } else {
                 continue
             }

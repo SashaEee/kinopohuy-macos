@@ -112,6 +112,49 @@ struct SignalStore: Sendable {
         }) ?? []
     }
 
+    // MARK: «Продолжить просмотр»
+
+    /// The snapshot of «Досмотреть» follows a watched mark the app made on the site.
+    func markAccountWatched(_ titleId: String) async {
+        _ = try? await database.write { db in
+            try db.execute(sql: "UPDATE account_list SET watched = 1 WHERE titleId = ?", arguments: [titleId])
+        }
+    }
+
+    /// Of these «Досмотреть» titles: which are done here (a film rated or «Уже смотрел», whatever the site says yet),
+    /// and which are set aside («Убрать из ряда», «Бросил», «Не моё» or «Это смотрел не я»), progress kept.
+    func continueStatus(_ items: [ContinueItem], now: Date = .now) async -> ContinueStatus {
+        guard !items.isEmpty else { return ContinueStatus() }
+        let ids = items.map(\.titleId)
+        let list = ids.map { "'\($0.replacingOccurrences(of: "'", with: "''"))'" }.joined(separator: ",")
+        return (try? await database.read { db in
+            var ratings: [String: Double] = [:]
+            for row in try Row.fetchAll(db, sql: "SELECT titleId, level FROM user_rating WHERE titleId IN (\(list))") {
+                ratings[row["titleId"]] = row["level"]
+            }
+            var marks: [String: Set<String>] = [:]
+            for row in try Row.fetchAll(
+                db, sql: "SELECT titleId, kind FROM title_feedback WHERE titleId IN (\(list)) AND (until IS NULL OR until > ?)",
+                arguments: [now.timeIntervalSince1970],
+            ) {
+                marks[row["titleId"], default: []].insert(row["kind"])
+            }
+            var status = ContinueStatus()
+            for item in items {
+                let kinds = marks[item.titleId] ?? []
+                let level = ratings[item.titleId]
+                if kinds.contains(FeedbackKind.continueHidden.rawValue) || kinds.contains(FeedbackKind.dropped.rawValue)
+                    || kinds.contains(FeedbackKind.notMe.rawValue) || (item.isSeries && (level ?? 0) <= -2)
+                {
+                    status.setAside.insert(item.titleId)
+                } else if !item.isSeries, level != nil || kinds.contains(FeedbackKind.seen.rawValue) {
+                    status.done.insert(item.titleId)
+                }
+            }
+            return status
+        }) ?? ContinueStatus()
+    }
+
     // MARK: Imported ratings
 
     struct ImportedRating: Sendable {

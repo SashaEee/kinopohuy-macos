@@ -42,6 +42,8 @@ struct TitleSignal: Sendable, Hashable {
     /// In «Досмотреть», not watched, no progress: «Можно начать».
     var accountListNoProgress = false
     var followed = false
+    /// «Хочу посмотреть» was ticked.
+    var interested = false
     var notMe = false
     var notSeed = false
     var continueHidden = false
@@ -227,6 +229,7 @@ enum SignalWeighter {
             }
             if let at = droppedAt[id] { components.append((weights.dropped, at)) }
             if kinds.contains(.interested) {
+                signal.interested = true
                 signal.intent = max(signal.intent, weights.bookmarkIntent)
                 components.append((weights.bookmarkIntent * weights.bookmarkTasteFactor, nil))
             }

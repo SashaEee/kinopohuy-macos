@@ -191,6 +191,8 @@ enum ReasonBuilder {
         case .followed:
             let noun = RussianText.kindAccusative(FeatureTable.kind(of: core.titles[title]))
             return Reason(kind: .canStart, short: "Вы отслеживаете", long: "Вы отслеживаете этот \(noun)", evidence: evidence)
+        case .interest:
+            return Reason(kind: .canStart, short: "Вы хотели посмотреть", long: "Вы отметили «Хочу посмотреть»", evidence: evidence)
         case nil:
             return nil
         }

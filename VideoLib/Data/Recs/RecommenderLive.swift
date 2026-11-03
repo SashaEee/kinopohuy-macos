@@ -15,6 +15,8 @@ final class RecRuntime: Sendable {
     let broadcaster: RecBroadcaster
     let engine: RecommenderEngine
     let enricher: TitleEnricher
+    /// «Оценил фильм — значит посмотрел» on the site's list.
+    let watched = WatchedSync()
 
     private init() {
         @Dependency(\.defaultDatabase) var database
@@ -194,11 +196,14 @@ extension RecommenderClient {
             let runtime = RecRuntime.shared
             await runtime.signals.rate(titleId, level: min(2, max(-2, level)), source: source)
             await runtime.engine.rebuildNow()
+            // Rated means seen: a film waiting in «Досмотреть» is done there too.
+            if await runtime.watched.filmDone(titleId) { await runtime.signals.markAccountWatched(titleId) }
         },
         clearRating: { titleId in
             let runtime = RecRuntime.shared
             await runtime.signals.clearRating(titleId)
             await runtime.engine.rebuildNow()
+            await runtime.watched.undo(titleId)
         },
         rating: { titleId in await RecRuntime.shared.signals.rating(titleId) },
         feedback: { titleId, kind in
@@ -207,11 +212,13 @@ extension RecommenderClient {
             let until: Double? = kind == .notToday ? Date.now.timeIntervalSince1970 + Weights.default.notTodayDays * 86400 : nil
             await runtime.signals.addFeedback(titleId, kind: kind, until: until)
             await runtime.engine.rebuildNow()
+            if kind == .seen, await runtime.watched.filmDone(titleId) { await runtime.signals.markAccountWatched(titleId) }
         },
         removeFeedback: { titleId, kind in
             let runtime = RecRuntime.shared
             await runtime.signals.removeFeedback(titleId, kind: kind)
             await runtime.engine.rebuildNow()
+            if kind == .seen { await runtime.watched.undo(titleId) }
         },
         activeFeedback: { titleId in await RecRuntime.shared.signals.activeFeedback(titleId) },
         override: { override in
@@ -232,6 +239,7 @@ extension RecommenderClient {
             guard let facts = await RecRuntime.shared.engine.critics(imdbId: imdbId, kpId: kpId), facts.rt != nil || facts.mc != nil else { return nil }
             return CriticScores(rottenTomatoes: facts.rt, metacritic: facts.mc)
         },
+        continueStatus: { items in await RecRuntime.shared.signals.continueStatus(items) },
         importRatings: { csv in await RecRuntime.shared.engine.importRatings(csv) },
         recordImpressions: { titleIds, surface in await RecRuntime.shared.signals.recordImpressions(titleIds, surface: surface) },
         markOpened: { titleId in await RecRuntime.shared.signals.markOpened(titleId) },
@@ -239,6 +247,12 @@ extension RecommenderClient {
             let runtime = RecRuntime.shared
             await runtime.signals.logSession(session)
             await runtime.engine.rebuildSoon()
+            // A film played to its end is watched: «Досмотреть» on the site says so too (a series ends by the site's
+            // own count of episodes).
+            let id = RecParsing.titleId(fromPath: session.titleId) ?? session.titleId
+            if session.completed, session.season == nil, await runtime.watched.filmDone(id) {
+                await runtime.signals.markAccountWatched(id)
+            }
         },
         captureDetails: { details in
             let runtime = RecRuntime.shared
@@ -253,6 +267,7 @@ extension RecommenderClient {
         },
         captureAccountList: { items in
             let runtime = RecRuntime.shared
+            await runtime.watched.update(items)
             await runtime.titles.upsertAccountTitles(items)
             await runtime.signals.replaceAccountList(items.compactMap { TitleMapper.accountItem(from: $0) })
             await runtime.engine.rebuildSoon()

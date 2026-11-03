@@ -152,6 +152,8 @@ public enum IntentOrigin: String, Codable, Sendable, Hashable, CaseIterable {
     case bookmark
     case accountList
     case followed
+    /// «Хочу посмотреть» in «Уточнить вкус».
+    case interest
 }
 
 /// One reason, ready to show: a short line on the card and a longer one for «Почему это?».

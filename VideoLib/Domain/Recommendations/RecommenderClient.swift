@@ -21,6 +21,20 @@ struct RecSnapshot: Equatable, Sendable {
     }
 }
 
+/// A «Досмотреть» title, as `continueStatus` needs it.
+struct ContinueItem: Sendable, Hashable {
+    var titleId: String
+    var isSeries: Bool
+}
+
+/// «Оценил фильм — значит посмотрел» and «Убрать из ряда», for the rows that show «Досмотреть».
+struct ContinueStatus: Equatable, Sendable {
+    /// Done here: a film rated or marked «Уже смотрел».
+    var done: Set<String> = []
+    /// Set aside: «Убрать из ряда», «Бросил», «Не моё» on a series, «Это смотрел не я».
+    var setAside: Set<String> = []
+}
+
 /// What «Импорт оценок» did: rows read, films recognised, and how many of those the app has already met on the site.
 struct RatingImportResult: Equatable, Sendable {
     var source: String
@@ -89,6 +103,9 @@ struct RecommenderClient: Sendable {
     /// Rotten Tomatoes (critics, %) and Metacritic (0–100) for a title page, from the data pack, by its IMDb id or its
     /// Kinopoisk id.
     var critics: @Sendable (_ imdbId: String?, _ kpId: Int?) async -> CriticScores?
+    /// Which «Досмотреть» titles are done here (a rated film) and which are set aside: «Продолжить просмотр» and
+    /// «Досмотреть» leave them out (or put them under «Досмотрено») before the site catches up.
+    var continueStatus: @Sendable (_ items: [ContinueItem]) async -> ContinueStatus
     /// «Импорт оценок»: the text of an IMDb or Letterboxd CSV export; nil when it's neither.
     var importRatings: @Sendable (_ csv: String) async -> RatingImportResult?
     var recordImpressions: @Sendable (_ titleIds: [String], _ surface: String) async -> Void
@@ -150,6 +167,7 @@ extension RecommenderClient: DependencyKey {
         interestGrid: { [] },
         tasteConfidence: { 0 },
         critics: { _, _ in nil },
+        continueStatus: { _ in ContinueStatus() },
         importRatings: { _ in nil },
         recordImpressions: { _, _ in },
         markOpened: { _ in },

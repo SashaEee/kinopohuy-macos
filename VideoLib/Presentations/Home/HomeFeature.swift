@@ -54,6 +54,8 @@ struct HomeFeature {
 
         /// The whole continue list, watched ones too (new episodes are matched against it).
         fileprivate var watchList: [MovieWatchLater] = []
+        /// Rated films (done here) and titles set aside, left out of «Продолжить просмотр» before the site catches up.
+        fileprivate var continueStatus = ContinueStatus()
         /// The site's feed of released episodes, and when it came (it's asked for again after 10 minutes).
         fileprivate var updateGroups: [SeriesUpdateGroup]?
         fileprivate var updatesLoadedAt: Date?
@@ -131,6 +133,7 @@ struct HomeFeature {
         case recsLoaded(RecSnapshot?, merge: Bool)
         case recsChanged
         case recStatusLoaded(RecStatus)
+        case continueStatusLoaded(ContinueStatus)
         case recOpened(String)
         case tonightDetailsLoaded(String, MovieDetailed)
         case tonightFeedback(String, TonightFeedback)
@@ -301,7 +304,7 @@ struct HomeFeature {
                 state.watchList = MovieWatchLater.keepingIds(movies, from: state.watchList)
                 refreshPersonalRows(&state)
 
-                return .merge(loadUpdates(&state), loadSimilar(&state))
+                return .merge(loadUpdates(&state), loadSimilar(&state), loadContinueStatus(state.watchList))
 
             case .continueLoaded(.failure):
                 return .none
@@ -394,12 +397,21 @@ struct HomeFeature {
                 return recsLoaded(&state, snapshot, merge: merge)
 
             case .recsChanged:
-                return loadRecs(merge: true)
+                // A rating or a mark may have finished a film or set a title aside: «Продолжить просмотр» follows.
+                return .merge(loadRecs(merge: true), loadContinueStatus(state.watchList))
 
             case let .recStatusLoaded(status):
                 state.recStatus = status
 
                 return .none
+
+            case let .continueStatusLoaded(status):
+                guard status != state.continueStatus else { return .none }
+
+                state.continueStatus = status
+                refreshPersonalRows(&state)
+
+                return loadSimilar(&state)
 
             case let .recOpened(titleId):
                 return .run { _ in await recommender.markOpened(titleId) }
@@ -641,8 +653,23 @@ struct HomeFeature {
 
     /// «Продолжить просмотр» and «Новые серии» from the continue list and the feed as they are now.
     private func refreshPersonalRows(_ state: inout State) {
-        state.continueWatching = state.watchList.filter { !$0.watched }
+        let status = state.continueStatus
+        state.continueWatching = state.watchList.filter { movie in
+            guard !movie.watched else { return false }
+            guard let id = movie.watchLaterId.id else { return true }
+            return !status.done.contains(id) && !status.setAside.contains(id)
+        }
         state.newEpisodes = Self.newEpisodes(groups: state.updateGroups ?? [], watchList: state.watchList, posters: state.posters)
+    }
+
+    /// Which of the list are rated films or set aside (local marks, no request).
+    private func loadContinueStatus(_ list: [MovieWatchLater]) -> Effect<Action> {
+        let items = list.compactMap { movie in movie.watchLaterId.id.map { ContinueItem(titleId: $0, isSeries: movie.isSeries) } }
+        guard !items.isEmpty else { return .none }
+
+        return .run { send in
+            await send(.continueStatusLoaded(await recommender.continueStatus(items)), animation: .smooth(duration: 0.35))
+        }
     }
 
     /// The feed of released episodes, at most every 10 minutes (Home shows often; the list itself is matched again
