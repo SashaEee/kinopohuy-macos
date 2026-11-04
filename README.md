@@ -20,7 +20,7 @@
 
 [![Скачать для macOS](https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C_%D0%B4%D0%BB%D1%8F_macOS-DMG-FF7A00?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg)
 &nbsp;
-[![Поддержать на Boosty](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-Boosty-F15F2C?style=for-the-badge&logo=boosty&logoColor=white)](https://boosty.to/sanchella_zzz)
+[![Поддержать картой, по СБП или криптой](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-%D0%BA%D0%B0%D1%80%D1%82%D0%BE%D0%B9_%C2%B7_%D0%A1%D0%91%D0%9F_%C2%B7_%D0%BA%D1%80%D0%B8%D0%BF%D1%82%D0%BE%D0%B9-F15F2C?style=for-the-badge)](#поддержать-проект)
 
 <sub>macOS 15 и новее · Apple Silicon и Intel · <a href="#установка">как установить</a> · <a href="https://github.com/SashaEee/kinopohuy-macos/releases">все версии</a></sub>
 
@@ -247,7 +247,11 @@ xattr -dr com.apple.quarantine "/Applications/КиноПохуй.app"
 <tr>
 <td valign="middle">
 
-**Boosty** — картой российского банка, разово или подпиской:
+**Картой или по СБП** — любой российской картой, без регистрации:
+
+[![Картой или СБП через CloudTips](https://img.shields.io/badge/%D0%9A%D0%B0%D1%80%D1%82%D0%BE%D0%B9_%D0%B8%D0%BB%D0%B8_%D0%A1%D0%91%D0%9F-CloudTips-2E7CF6?style=for-the-badge)](https://pay.cloudtips.ru/p/553b7918)
+
+**Boosty** — разово или подпиской, нужен аккаунт Boosty:
 
 [![Поддержать на Boosty](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-Boosty-F15F2C?style=for-the-badge&logo=boosty&logoColor=white)](https://boosty.to/sanchella_zzz)
 
@@ -267,7 +271,17 @@ UQC3PZ6C2Bhte2-pvdbT9a5c54tSNynDcz080vKHJ3UB8i2f
 </tr>
 </table>
 
-То же самое есть в приложении: **Настройки → О программе → Поддержать проект**.
+**Через Bybit:**
+- **Перевод по UID** внутри Bybit, мгновенно и без комиссии: `150542700`
+- **BTC в сети Bitcoin:**
+
+  ```text
+  1BC5Z3jwh1AUKpk9ECz1FqFqfjd5yh82Kz
+  ```
+
+  > **Только BTC в сети Bitcoin.** На небольшие суммы заметную часть съест комиссия сети: для доната до пары тысяч рублей удобнее карта или USDT.
+
+То же самое есть в приложении: меню **Справка → Поддержать проект…** или **Настройки → О программе**.
 
 **Звезда на GitHub — тоже поддержка:** так проект находят другие.
 
@@ -313,4 +327,4 @@ cd kinopohuy-macos
 
 **KinoPohuy** is a native macOS client (SwiftUI) for a Russian-language online cinema: a streaming-style catalog, on-device recommendations that explain themselves (site links, plot similarity via macOS's built-in language model, taste-alike viewers, critics' scores from Wikidata; a «pick for me» that understands plain Russian; since 2.1), its own player with a Netflix-like pause screen, picture-in-picture and AirPlay, offline downloads via aria2, Sparkle auto-updates and no telemetry. It is unofficial and hosts or distributes nothing: you enter the site address yourself. The interface is in Russian.
 
-macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project on [Boosty](https://boosty.to/sanchella_zzz) or with USDT on TON (address above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).
+macOS 15+, Apple Silicon and Intel. [Download the DMG](https://github.com/SashaEee/kinopohuy-macos/releases/latest/download/KinoPohuy.dmg). The app isn't notarized, so on first launch open System Settings → Privacy & Security → **Open Anyway**. Support the project with a Russian card via [CloudTips](https://pay.cloudtips.ru/p/553b7918), on [Boosty](https://boosty.to/sanchella_zzz), with USDT on TON, by Bybit UID or with BTC (addresses above). MIT-licensed, based on open-source code by voidboost (MIT, © 2025 voidboost).

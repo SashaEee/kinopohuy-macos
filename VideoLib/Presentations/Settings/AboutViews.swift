@@ -113,6 +113,8 @@ enum Donations {
         let id: String
         let symbol: String
         let url: URL
+        /// How it works, on hover: whether it needs an account.
+        let help: String
     }
 
     struct Wallet: Identifiable {
@@ -120,13 +122,19 @@ enum Donations {
         let address: String
         /// What the address takes, under its QR code: a coin sent on another network is lost.
         let note: String
+        /// A Bybit UID is typed into Bybit's transfer form, not scanned: it gets no QR code.
+        var hasQR = true
     }
 
+    /// The card first: it needs no account, while Boosty asks to sign in before a tip.
     static var options: [Option] {
         [
-            Option(id: "Boosty", symbol: "heart.fill", url: AppLinks.boosty),
-            Option(id: "CloudTips", symbol: "cup.and.saucer.fill", url: AppLinks.cloudtips),
-            Option(id: "ЮMoney", symbol: "rublesign.circle.fill", url: AppLinks.yoomoney),
+            Option(id: "Картой или СБП", symbol: "creditcard.fill", url: AppLinks.cloudtips,
+                   help: "Через CloudTips: любой картой или по СБП, без регистрации"),
+            Option(id: "Boosty", symbol: "heart.fill", url: AppLinks.boosty,
+                   help: "Разово или подпиской, нужен аккаунт Boosty"),
+            Option(id: "ЮMoney", symbol: "rublesign.circle.fill", url: AppLinks.yoomoney,
+                   help: "Картой или из кошелька ЮMoney"),
         ]
         .filter { AppLinks.isSet($0.url) }
     }
@@ -134,6 +142,9 @@ enum Donations {
     static var wallets: [Wallet] {
         [
             Wallet(id: "USDT · TON", address: AppLinks.cryptoUSDT, note: "Только USDT в сети TON"),
+            Wallet(id: "Bybit · UID", address: AppLinks.bybitUID, note: "Перевод по UID внутри Bybit, без комиссии",
+                   hasQR: false),
+            Wallet(id: "BTC", address: AppLinks.cryptoBTC, note: "Только BTC в сети Bitcoin"),
         ]
         .filter { AppLinks.isSet($0.address) }
     }
@@ -180,6 +191,7 @@ struct SupportProjectCard: View {
                             }
                         }
                         .buttonStyle(KPSecondaryButtonStyle(size: 13))
+                        .help(option.help)
                     }
                 }
             }
@@ -259,17 +271,19 @@ private struct WalletRow: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(KPIconButtonStyle(diameter: 28))
-            .help(copied ? "Скопировано" : "Скопировать адрес")
+            .help(copied ? "Скопировано" : wallet.hasQR ? "Скопировать адрес" : "Скопировать UID")
 
-            Button {
-                showQR.toggle()
-            } label: {
-                Image(systemName: "qrcode")
-            }
-            .buttonStyle(KPIconButtonStyle(diameter: 28))
-            .help("Показать QR-код")
-            .popover(isPresented: $showQR, arrowEdge: .bottom) {
-                QRCodeView(text: wallet.address, caption: wallet.note)
+            if wallet.hasQR {
+                Button {
+                    showQR.toggle()
+                } label: {
+                    Image(systemName: "qrcode")
+                }
+                .buttonStyle(KPIconButtonStyle(diameter: 28))
+                .help("Показать QR-код")
+                .popover(isPresented: $showQR, arrowEdge: .bottom) {
+                    QRCodeView(text: wallet.address, caption: wallet.note)
+                }
             }
         }
         .frame(height: 44)
